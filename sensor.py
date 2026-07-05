@@ -796,3 +796,45 @@ class AnthbotSensorEntity(
                 if isinstance((zone_name := zone.get("name")), str) and zone_name
             ]
         return attributes
+        
+class AnthbotMapSensorEntity(
+    CoordinatorEntity[AnthbotGenieDataUpdateCoordinator], SensorEntity
+):
+    """Anthbot map entity."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Map"
+    _attr_icon = "mdi:map"
+
+    def __init__(
+        self,
+        coordinator: AnthbotGenieDataUpdateCoordinator,
+    ) -> None:
+        super().__init__(coordinator)
+
+        self._attr_unique_id = (
+            f"{coordinator.client.serial_number}_map"
+        )
+
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.client.serial_number)},
+            manufacturer="Anthbot",
+            model=coordinator.device.model,
+            name=coordinator.device.alias,
+        )
+
+    @property
+    def native_value(self) -> str:
+        return "ready"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        state = self.coordinator.reported_state
+
+        return {
+            "pose": state.get("pose"),
+            "path": state.get("path"),
+            "map_time": state.get("map_time"),
+            "area_time": state.get("area_time"),
+            "area_definition": state.get("_area_definition"),
+        }        
