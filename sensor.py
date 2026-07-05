@@ -655,21 +655,23 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Anthbot sensors from config entry."""
+
     coordinators: list[AnthbotGenieDataUpdateCoordinator] = hass.data[DOMAIN][
         entry.entry_id
     ]
-entities = [
-    AnthbotSensorEntity(coordinator, description)
-    for coordinator in coordinators
-    for description in SENSORS
-]
 
-entities.extend(
-    AnthbotMapSensorEntity(coordinator)
-    for coordinator in coordinators
-)
+    entities = [
+        AnthbotSensorEntity(coordinator, description)
+        for coordinator in coordinators
+        for description in SENSORS
+    ]
 
-async_add_entities(entities)
+    entities.extend(
+        AnthbotMapSensorEntity(coordinator)
+        for coordinator in coordinators
+    )
+
+    async_add_entities(entities)
 
 
 class AnthbotSensorEntity(
