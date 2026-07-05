@@ -658,11 +658,18 @@ async def async_setup_entry(
     coordinators: list[AnthbotGenieDataUpdateCoordinator] = hass.data[DOMAIN][
         entry.entry_id
     ]
-    async_add_entities(
-        AnthbotSensorEntity(coordinator, description)
-        for coordinator in coordinators
-        for description in SENSORS
-    )
+entities = [
+    AnthbotSensorEntity(coordinator, description)
+    for coordinator in coordinators
+    for description in SENSORS
+]
+
+entities.extend(
+    AnthbotMapSensorEntity(coordinator)
+    for coordinator in coordinators
+)
+
+async_add_entities(entities)
 
 
 class AnthbotSensorEntity(
