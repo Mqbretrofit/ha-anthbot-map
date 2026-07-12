@@ -1,5 +1,5 @@
-﻿import { AnthbotMapRenderer } from "./renderer.js?v=78";
-import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=78";
+﻿import { AnthbotMapRenderer } from "./renderer.js?v=79";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=79";
 import {
   adjustCalibration,
   cardToYaml,
@@ -7,7 +7,7 @@ import {
   readDecodedBoundaryCalibration,
   readRobotCalibration,
   resetCalibration,
-} from "./calibration.js?v=78";
+} from "./calibration.js?v=79";
 
 const ENTITY_MAP = {
   battery: ["sensor", ["battery_level"]],
@@ -117,7 +117,7 @@ class AnthbotMapCard extends HTMLElement {
     const root = this.shadowRoot;
     root.innerHTML = `
       <ha-card>
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=78")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=79")}">
         <section class="app-shell">
           <div class="top-menu">
             <div>
@@ -321,8 +321,18 @@ class AnthbotMapCard extends HTMLElement {
     this.updateMapBadges(attributes);
     this.updateBatteryAndStatus();
     this.renderZoneControls(attributes.area_definition);
-    this.renderAppPanel();
+    if (!this.isPanelControlActive()) {
+      this.renderAppPanel();
+    }
     this.updateYaml();
+  }
+
+  isPanelControlActive() {
+    const activeElement = this.shadowRoot?.activeElement;
+    if (!activeElement?.closest?.('[data-role="panel-body"]')) {
+      return false;
+    }
+    return ["SELECT", "INPUT", "BUTTON"].includes(activeElement.tagName);
   }
 
   updateMapBadges(attributes) {
@@ -661,7 +671,7 @@ class AnthbotMapCard extends HTMLElement {
       calibration: this.calibration,
       robotCalibration: this.robotCalibration,
       decodedBoundaryCalibration: this.decodedBoundaryCalibration,
-      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=78"),
+      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=79"),
       noGoLabel: this.t("forbidden"),
       robotSize: this.config.robot_size ?? this.config.robotSize,
       robotImageRotation: this.config.robot_image_rotation ?? this.config.robotImageRotation,
