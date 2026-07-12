@@ -830,11 +830,102 @@ class AnthbotMapSensorEntity(
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         state = self.coordinator.reported_state
+        map_definition = state.get("_map_definition")
+        path_definition = state.get("_path_definition")
 
         return {
             "pose": state.get("pose"),
+            "cur_pose": state.get("curPose") or state.get("cur_pose"),
+            "map_scan_pose": state.get("mapScanPose") or state.get("map_scan_pose"),
             "path": state.get("path"),
             "map_time": state.get("map_time"),
+            "path_time": state.get("path_time"),
             "area_time": state.get("area_time"),
             "area_definition": state.get("_area_definition"),
+            "map_definition_status": _definition_status(map_definition),
+            "path_definition_status": _definition_status(path_definition),
+            "map_raster": _definition_map_raster(map_definition),
+            "map_definition_preview": _definition_preview(map_definition),
+            "path_definition_preview": _definition_preview(path_definition),
+            "map_binary_paths": _definition_binary_paths(map_definition),
+            "path_binary_paths": _definition_binary_paths(path_definition),
+            "map_definition_error": state.get("_map_definition_error"),
+            "path_definition_error": state.get("_path_definition_error"),
         }        
+
+
+def _definition_status(value: Any) -> str:
+    if isinstance(value, dict):
+        return f"dict:{len(value)}"
+    if isinstance(value, list):
+        return f"list:{len(value)}"
+    if value is None:
+        return "not_loaded"
+    return type(value).__name__
+
+
+def _definition_preview(value: Any) -> Any:
+    if isinstance(value, dict):
+        if isinstance(value.get("_binary_probe"), dict):
+            return value["_binary_probe"]
+        preview: dict[str, Any] = {"keys": [str(key) for key in list(value.keys())[:20]]}
+        for key, child in list(value.items())[:8]:
+            preview[str(key)] = _small_shape(child)
+        return preview
+    if isinstance(value, list):
+        return {
+            "length": len(value),
+            "first": _small_shape(value[0]) if value else None,
+        }
+    return None
+
+
+def _definition_map_raster(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    raster = value.get("_map_raster")
+    if isinstance(raster, dict):
+        return raster
+    return None
+
+
+def _small_shape(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {"type": "dict", "keys": [str(key) for key in list(value.keys())[:10]]}
+    if isinstance(value, list):
+        return {
+            "type": "list",
+            "length": len(value),
+            "first": _small_shape(value[0]) if value else None,
+        }
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return type(value).__name__
+
+
+def _definition_binary_paths(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, dict):
+        return []
+    probe = value.get("_binary_probe")
+    if not isinstance(probe, dict):
+        return []
+    paths = probe.get("coordinate_paths")
+    if not isinstance(paths, list):
+        return []
+    compact: list[dict[str, Any]] = []
+    for path in paths[:4]:
+        if not isinstance(path, dict):
+            continue
+        points = path.get("points")
+        if not isinstance(points, list) or len(points) < 3:
+            continue
+        compact.append(
+            {
+                "encoding": path.get("encoding"),
+                "offset": path.get("offset"),
+                "count": path.get("count"),
+                "bounds": path.get("bounds"),
+                "points": points,
+            }
+        )
+    return compact

@@ -114,16 +114,19 @@ RTK_BASE_STATE_OPTIONS: dict[int, str] = {
     4: "error",
 }
 
-DEFAULT_SCAN_INTERVAL = 30
+DEFAULT_SCAN_INTERVAL = 5
 DEFAULT_SCAN_INTERVAL_DELTA = timedelta(seconds=DEFAULT_SCAN_INTERVAL)
 
 # Service names and attributes.
 SERVICE_START_FULL_MOW = "start_full_mow"
+SERVICE_CONNECT_CLOUD = "connect_cloud"
 SERVICE_STOP_MOW = "stop_mow"
 SERVICE_SET_MOW_HEIGHT = "set_mow_height"
 SERVICE_RETURN_TO_DOCK = "return_to_dock"
 SERVICE_SET_VOICE_VOLUME = "set_voice_volume"
 SERVICE_SET_CUSTOM_MOWING_DIRECTION = "set_custom_mowing_direction"
+SERVICE_SET_RAIN_CONTINUE_TIME = "set_rain_continue_time"
+SERVICE_SET_RAIN_PERCEPTION = "set_rain_perception"
 SERVICE_START_ZONE_MOW = "start_zone_mow"
 SERVICE_START_AUTO_ZONE_MOW = "start_auto_zone_mow"
 
@@ -132,6 +135,8 @@ ATTR_MOW_HEIGHT = "mow_height"
 ATTR_VOICE_VOLUME = "voice_volume"
 ATTR_MOW_DIRECTION = "mow_direction"
 ATTR_ENABLE_CUSTOM_DIRECTION = "enable_custom_direction"
+ATTR_RAIN_CONTINUE_TIME = "rain_continue_time"
+ATTR_ENABLE_RAIN_PERCEPTION = "enable_rain_perception"
 ATTR_ZONES = "zones"
 ATTR_AUTO_ZONES = "auto_zones"
 
@@ -140,15 +145,6 @@ DEFAULT_IOT_REGION = "us-east-1"
 DEFAULT_IOT_ENDPOINT = "a2bhy9nr7jkgaj-ats.iot.us-east-1.amazonaws.com"
 IOT_ENDPOINT_TEMPLATE = "a2bhy9nr7jkgaj-ats.iot.{region}.amazonaws.com"
 CN_NORTHWEST_IOT_ENDPOINT = "a2iw0czxjowiip-ats.iot.cn-northwest-1.amazonaws.com.cn"
-
-AWS_ACCESS_KEY_DEFAULT = "AKIAV2C4RVIAOLEXB545"
-AWS_SECRET_KEY_DEFAULT = "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"
-
-AWS_ACCESS_KEY_CN = "AKIAWJ3KIT7IV6AHMJ5V"
-AWS_SECRET_KEY_CN = "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"
-
-AWS_ACCESS_KEY_CN_NORTHWEST = "AKIAYVWVSSRF7W5YWI74"
-AWS_SECRET_KEY_CN_NORTHWEST = "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"
 
 # Country list for login (areaCode in Anthbot API).
 COUNTRY_AREA_CODES: tuple[tuple[str, str], ...] = (

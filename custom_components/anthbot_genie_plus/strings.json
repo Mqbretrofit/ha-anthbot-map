@@ -68,6 +68,9 @@
       }
     },
     "button": {
+      "connect_cloud": {
+        "name": "Connect cloud"
+      },
       "start_full_mow": {
         "name": "Start full mow"
       },

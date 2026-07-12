@@ -1,0 +1,11 @@
+{
+  "domain": "anthbot_genie_plus",
+  "name": "Anthbot Genie Plus",
+  "codeowners": ["@Mqbretrofit"],
+  "config_flow": true,
+  "documentation": "https://github.com/Mqbretrofit/ha-anthbot-map",
+  "issue_tracker": "https://github.com/Mqbretrofit/ha-anthbot-map/issues",
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "version": "1.0.5"
+}

@@ -12,6 +12,20 @@ start_full_mow:
       selector:
         text:
 
+connect_cloud:
+  name: Connect Cloud
+  description: Wake the mower cloud connection and request all current properties.
+  target:
+    entity:
+      integration: anthbot_genie_plus
+  fields:
+    serial_number:
+      name: Serial number
+      description: Optional mower serial number or list of serial numbers.
+      example: "YOUR_MOWER_SERIAL"
+      selector:
+        text:
+
 stop_mow:
   name: Stop Mow
   description: Stop all current tasks on selected Anthbot mower(s).
@@ -119,6 +133,51 @@ set_custom_mowing_direction:
       description: Enable or disable custom mowing direction.
       required: false
       default: true
+      selector:
+        boolean:
+    serial_number:
+      name: Serial number
+      description: Optional mower serial number or list of serial numbers.
+      example: "YOUR_MOWER_SERIAL"
+      selector:
+        text:
+
+set_rain_continue_time:
+  name: Set Rain Continue Time
+  description: Set how long the mower waits after rain before continuing.
+  target:
+    entity:
+      integration: anthbot_genie_plus
+  fields:
+    rain_continue_time:
+      name: Rain continue time
+      description: Wait time in hours, from 0 to 8.
+      required: true
+      example: 3
+      selector:
+        number:
+          min: 0
+          max: 8
+          step: 1
+          mode: slider
+    serial_number:
+      name: Serial number
+      description: Optional mower serial number or list of serial numbers.
+      example: "YOUR_MOWER_SERIAL"
+      selector:
+        text:
+
+set_rain_perception:
+  name: Set Rain Perception
+  description: Enable or disable the mower rain sensor behavior.
+  target:
+    entity:
+      integration: anthbot_genie_plus
+  fields:
+    enable_rain_perception:
+      name: Enable rain perception
+      description: Enable or disable rain perception.
+      required: true
       selector:
         boolean:
     serial_number:

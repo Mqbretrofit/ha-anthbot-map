@@ -5,28 +5,24 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import gzip
 import hashlib
 import hmac
 import json
 import logging
 import re
+import struct
 import time
 from typing import Any
 import uuid
 from urllib.parse import parse_qs, quote, urlparse
+import zlib
 
 from aiohttp import ClientError, ClientSession
 
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
-    AWS_ACCESS_KEY_CN,
-    AWS_ACCESS_KEY_CN_NORTHWEST,
-    AWS_ACCESS_KEY_DEFAULT,
-    AWS_SECRET_KEY_CN,
-    AWS_SECRET_KEY_CN_NORTHWEST,
-    AWS_SECRET_KEY_DEFAULT,
-    CN_NORTHWEST_IOT_ENDPOINT,
     DEFAULT_IOT_ENDPOINT,
     DEFAULT_IOT_REGION,
     IOT_ENDPOINT_TEMPLATE,
@@ -72,6 +68,473 @@ class AnthbotDeviceRegion:
     serial_number: str
     region_name: str
     iot_endpoint: str
+
+
+def decode_device_definition(raw_bytes: bytes, label: str) -> dict[str, Any] | list[Any]:
+    """Decode Anthbot device file payloads from JSON or compact binary formats."""
+    if "map" in label.lower():
+        map_raster = _decode_map_raster(raw_bytes)
+        if map_raster is not None:
+            return {
+                "_map_raster": map_raster,
+                "_binary_probe": _probe_binary_definition(raw_bytes, label, []),
+            }
+
+    attempts: list[tuple[str, bytes]] = [("raw", raw_bytes)]
+    if raw_bytes.startswith(b"\x1f\x8b"):
+        try:
+            attempts.append(("gzip", gzip.decompress(raw_bytes)))
+        except (OSError, EOFError, zlib.error):
+            pass
+    try:
+        attempts.append(("zlib", zlib.decompress(raw_bytes)))
+    except zlib.error:
+        pass
+
+    errors: list[str] = []
+    for name, data in attempts:
+        try:
+            parsed = json.loads(data.decode("utf-8"))
+            if isinstance(parsed, (dict, list)):
+                return parsed
+        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            errors.append(f"{name}/json:{err}")
+
+        try:
+            parsed, offset = _read_msgpack_value(data, 0)
+            if offset <= len(data) and isinstance(parsed, (dict, list)):
+                return parsed
+        except (ValueError, UnicodeDecodeError, struct.error) as err:
+            errors.append(f"{name}/msgpack:{err}")
+
+    preview = raw_bytes[:16].hex(" ")
+    return {
+        "_binary_probe": _probe_binary_definition(raw_bytes, label, errors),
+    }
+
+
+def _probe_binary_definition(
+    raw_bytes: bytes,
+    label: str,
+    errors: list[str],
+) -> dict[str, Any]:
+    return {
+        "label": label,
+        "size": len(raw_bytes),
+        "first_bytes": raw_bytes[:32].hex(" "),
+        "int16le_runs": _find_coordinate_runs(raw_bytes, fmt="<hh", step=2),
+        "int32le_runs": _find_coordinate_runs(raw_bytes, fmt="<ii", step=4),
+        "coordinate_paths": _find_coordinate_paths(raw_bytes),
+        "decode_errors": errors[-4:],
+    }
+
+
+def _decode_map_raster(raw_bytes: bytes) -> dict[str, Any] | None:
+    """Decode Anthbot cloud map raster from the app-compatible LZ4 payload."""
+    if len(raw_bytes) < 68:
+        return None
+    try:
+        header_len = struct.unpack_from("<I", raw_bytes, 0)[0]
+        decoded_len = struct.unpack_from("<I", raw_bytes, 12)[0]
+        width = struct.unpack_from("<I", raw_bytes, 36)[0]
+        height = struct.unpack_from("<I", raw_bytes, 40)[0]
+        resolution = struct.unpack_from("<f", raw_bytes, 44)[0]
+        min_x_m = struct.unpack_from("<f", raw_bytes, 48)[0]
+        min_y_m = struct.unpack_from("<f", raw_bytes, 52)[0]
+    except struct.error:
+        return None
+
+    if (
+        header_len < 32
+        or header_len >= len(raw_bytes)
+        or width <= 0
+        or height <= 0
+        or decoded_len != width * height
+        or decoded_len > 2_000_000
+    ):
+        return None
+
+    try:
+        pixels = _lz4_block_decompress(raw_bytes[header_len:], decoded_len)
+    except ValueError:
+        return None
+
+    resolution_mm = float(resolution) * 1000.0
+    min_x = float(min_x_m) * 1000.0
+    min_y = float(min_y_m) * 1000.0
+    max_x = min_x + width * resolution_mm
+    max_y = min_y + height * resolution_mm
+
+    return {
+        "encoding": "rle_u8_lz4_map",
+        "width": width,
+        "height": height,
+        "resolution": round(float(resolution), 6),
+        "bounds": {
+            "min_x": round(min_x, 3),
+            "max_x": round(max_x, 3),
+            "min_y": round(min_y, 3),
+            "max_y": round(max_y, 3),
+        },
+        "values": _byte_counts(pixels),
+        "runs": _rle_encode_bytes(pixels),
+    }
+
+
+def _lz4_block_decompress(data: bytes, expected_len: int) -> bytes:
+    """Decompress an LZ4 block without frame headers."""
+    output = bytearray(expected_len)
+    src = 0
+    dst = 0
+
+    while src < len(data):
+        token = data[src]
+        src += 1
+
+        literal_len = token >> 4
+        if literal_len == 15:
+            while True:
+                if src >= len(data):
+                    raise ValueError("unterminated lz4 literal length")
+                extra = data[src]
+                src += 1
+                literal_len += extra
+                if extra != 255:
+                    break
+
+        if src + literal_len > len(data) or dst + literal_len > expected_len:
+            raise ValueError("lz4 literal overrun")
+        output[dst : dst + literal_len] = data[src : src + literal_len]
+        src += literal_len
+        dst += literal_len
+
+        if src >= len(data):
+            break
+        if src + 2 > len(data):
+            raise ValueError("truncated lz4 offset")
+
+        offset = data[src] | (data[src + 1] << 8)
+        src += 2
+        if offset <= 0 or offset > dst:
+            raise ValueError("invalid lz4 offset")
+
+        match_len = token & 0x0F
+        if match_len == 15:
+            while True:
+                if src >= len(data):
+                    raise ValueError("unterminated lz4 match length")
+                extra = data[src]
+                src += 1
+                match_len += extra
+                if extra != 255:
+                    break
+        match_len += 4
+
+        if dst + match_len > expected_len:
+            raise ValueError("lz4 match overrun")
+        for _ in range(match_len):
+            output[dst] = output[dst - offset]
+            dst += 1
+
+    if dst != expected_len:
+        raise ValueError("lz4 decoded length mismatch")
+    return bytes(output)
+
+
+def _rle_encode_bytes(data: bytes) -> list[int]:
+    """Return flattened value/count RLE pairs for compact HA attributes."""
+    if not data:
+        return []
+    runs: list[int] = []
+    current = data[0]
+    count = 1
+    for value in data[1:]:
+        if value == current and count < 65535:
+            count += 1
+            continue
+        runs.extend((int(current), count))
+        current = value
+        count = 1
+    runs.extend((int(current), count))
+    return runs
+
+
+def _byte_counts(data: bytes) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in data:
+        key = str(int(value))
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def _find_coordinate_runs(
+    raw_bytes: bytes,
+    *,
+    fmt: str,
+    step: int,
+) -> list[dict[str, Any]]:
+    size = struct.calcsize(fmt)
+    runs: list[dict[str, Any]] = []
+    limit = len(raw_bytes) - size
+
+    for start in range(0, min(len(raw_bytes), 512), step):
+        points: list[tuple[int, int]] = []
+        previous: tuple[int, int] | None = None
+        offset = start
+
+        while offset <= limit:
+            x, y = struct.unpack_from(fmt, raw_bytes, offset)
+            if not _looks_like_coordinate(x, y, previous):
+                break
+            if x != 0 or y != 0:
+                points.append((int(x), int(y)))
+                previous = (int(x), int(y))
+            offset += size
+
+        if len(points) >= 8:
+            runs.append(
+                {
+                    "offset": start,
+                    "count": len(points),
+                    "first": [[x, y] for x, y in points[:8]],
+                    "bounds": _point_bounds(points),
+                }
+            )
+        if len(runs) >= 12:
+            break
+
+    return runs
+
+
+def _find_coordinate_paths(raw_bytes: bytes) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    for name, fmt, step in (
+        ("int16le", "<hh", 2),
+        ("int16be", ">hh", 2),
+        ("int32le", "<ii", 4),
+        ("int32be", ">ii", 4),
+    ):
+        candidates.extend(_scan_coordinate_paths(raw_bytes, name=name, fmt=fmt, step=step))
+
+    candidates.sort(key=lambda item: item.get("score", 0), reverse=True)
+    return candidates[:6]
+
+
+def _scan_coordinate_paths(
+    raw_bytes: bytes,
+    *,
+    name: str,
+    fmt: str,
+    step: int,
+) -> list[dict[str, Any]]:
+    pair_size = struct.calcsize(fmt)
+    limit = len(raw_bytes) - pair_size
+    paths: list[dict[str, Any]] = []
+    offset = 0
+
+    while offset <= limit:
+        points: list[tuple[int, int]] = []
+        previous: tuple[int, int] | None = None
+        cursor = offset
+
+        while cursor <= limit:
+            x, y = struct.unpack_from(fmt, raw_bytes, cursor)
+            point = (int(x), int(y))
+            if _is_coordinate_sentinel(point):
+                cursor += pair_size
+                continue
+            if not _looks_like_path_coordinate(point, previous):
+                break
+            points.append(point)
+            previous = point
+            cursor += pair_size
+
+        candidate = _coordinate_path_candidate(name, offset, points)
+        if candidate is not None:
+            paths.append(candidate)
+            offset = max(cursor, offset + pair_size)
+        else:
+            offset += step
+
+        if len(paths) >= 24:
+            break
+
+    return paths
+
+
+def _coordinate_path_candidate(
+    encoding: str,
+    offset: int,
+    points: list[tuple[int, int]],
+) -> dict[str, Any] | None:
+    if len(points) < 24:
+        return None
+    unique_count = len(set(points))
+    if unique_count < 16:
+        return None
+    bounds = _point_bounds(points)
+    width = bounds["max_x"] - bounds["min_x"]
+    height = bounds["max_y"] - bounds["min_y"]
+    if width < 800 or height < 800:
+        return None
+
+    score = unique_count + min(len(points), 800) + (width + height) / 100
+    return {
+        "encoding": encoding,
+        "offset": offset,
+        "count": len(points),
+        "score": round(score, 2),
+        "bounds": bounds,
+        "first": [[x, y] for x, y in points[:10]],
+        "points": [[x, y] for x, y in points[:1000]],
+    }
+
+
+def _is_coordinate_sentinel(point: tuple[int, int]) -> bool:
+    return point in {
+        (0, 0),
+        (-1, -1),
+        (1, -1),
+        (-1, 1),
+    }
+
+
+def _looks_like_path_coordinate(
+    point: tuple[int, int],
+    previous: tuple[int, int] | None,
+) -> bool:
+    x, y = point
+    if abs(x) > 35000 or abs(y) > 35000:
+        return False
+    if previous is None:
+        return True
+    return abs(x - previous[0]) <= 16000 and abs(y - previous[1]) <= 16000
+
+
+def _looks_like_coordinate(
+    x: int,
+    y: int,
+    previous: tuple[int, int] | None,
+) -> bool:
+    if abs(x) > 50000 or abs(y) > 50000:
+        return False
+    if previous is None:
+        return True
+    return abs(x - previous[0]) <= 12000 and abs(y - previous[1]) <= 12000
+
+
+def _point_bounds(points: list[tuple[int, int]]) -> dict[str, int]:
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    return {
+        "min_x": min(xs),
+        "max_x": max(xs),
+        "min_y": min(ys),
+        "max_y": max(ys),
+    }
+
+
+def _read_msgpack_value(data: bytes, offset: int) -> tuple[Any, int]:
+    if offset >= len(data):
+        raise ValueError("unexpected end of msgpack data")
+    prefix = data[offset]
+    offset += 1
+
+    if prefix <= 0x7F:
+        return prefix, offset
+    if prefix >= 0xE0:
+        return prefix - 0x100, offset
+    if 0x80 <= prefix <= 0x8F:
+        return _read_msgpack_map(data, offset, prefix & 0x0F)
+    if 0x90 <= prefix <= 0x9F:
+        return _read_msgpack_array(data, offset, prefix & 0x0F)
+    if 0xA0 <= prefix <= 0xBF:
+        return _read_msgpack_string(data, offset, prefix & 0x1F)
+
+    if prefix == 0xC0:
+        return None, offset
+    if prefix == 0xC2:
+        return False, offset
+    if prefix == 0xC3:
+        return True, offset
+    if prefix == 0xCA:
+        return _unpack(">f", data, offset)
+    if prefix == 0xCB:
+        return _unpack(">d", data, offset)
+    if prefix == 0xCC:
+        return _unpack(">B", data, offset)
+    if prefix == 0xCD:
+        return _unpack(">H", data, offset)
+    if prefix == 0xCE:
+        return _unpack(">I", data, offset)
+    if prefix == 0xCF:
+        return _unpack(">Q", data, offset)
+    if prefix == 0xD0:
+        return _unpack(">b", data, offset)
+    if prefix == 0xD1:
+        return _unpack(">h", data, offset)
+    if prefix == 0xD2:
+        return _unpack(">i", data, offset)
+    if prefix == 0xD3:
+        return _unpack(">q", data, offset)
+    if prefix == 0xD9:
+        length, offset = _unpack(">B", data, offset)
+        return _read_msgpack_string(data, offset, length)
+    if prefix == 0xDA:
+        length, offset = _unpack(">H", data, offset)
+        return _read_msgpack_string(data, offset, length)
+    if prefix == 0xDB:
+        length, offset = _unpack(">I", data, offset)
+        return _read_msgpack_string(data, offset, length)
+    if prefix == 0xDC:
+        length, offset = _unpack(">H", data, offset)
+        return _read_msgpack_array(data, offset, length)
+    if prefix == 0xDD:
+        length, offset = _unpack(">I", data, offset)
+        return _read_msgpack_array(data, offset, length)
+    if prefix == 0xDE:
+        length, offset = _unpack(">H", data, offset)
+        return _read_msgpack_map(data, offset, length)
+    if prefix == 0xDF:
+        length, offset = _unpack(">I", data, offset)
+        return _read_msgpack_map(data, offset, length)
+    if prefix in {0xC4, 0xC5, 0xC6}:
+        size_formats = {0xC4: ">B", 0xC5: ">H", 0xC6: ">I"}
+        length, offset = _unpack(size_formats[prefix], data, offset)
+        return data[offset : offset + length], offset + length
+
+    raise ValueError(f"unsupported msgpack prefix 0x{prefix:02x}")
+
+
+def _read_msgpack_string(data: bytes, offset: int, length: int) -> tuple[str, int]:
+    end = offset + length
+    if end > len(data):
+        raise ValueError("string extends past end of msgpack data")
+    return data[offset:end].decode("utf-8"), end
+
+
+def _read_msgpack_array(data: bytes, offset: int, length: int) -> tuple[list[Any], int]:
+    items: list[Any] = []
+    for _ in range(length):
+        item, offset = _read_msgpack_value(data, offset)
+        items.append(item)
+    return items, offset
+
+
+def _read_msgpack_map(data: bytes, offset: int, length: int) -> tuple[dict[Any, Any], int]:
+    result: dict[Any, Any] = {}
+    for _ in range(length):
+        key, offset = _read_msgpack_value(data, offset)
+        value, offset = _read_msgpack_value(data, offset)
+        result[key] = value
+    return result, offset
+
+
+def _unpack(fmt: str, data: bytes, offset: int) -> tuple[Any, int]:
+    size = struct.calcsize(fmt)
+    if offset + size > len(data):
+        raise ValueError("numeric value extends past end of msgpack data")
+    return struct.unpack_from(fmt, data, offset)[0], offset + size
 
 
 class AnthbotCloudApiClient:
@@ -338,18 +801,22 @@ class AnthbotCloudApiClient:
             expiration=expiration,
         )
 
-    async def async_get_device_area_definition(
-        self, serial_number: str
-    ) -> dict[str, Any]:
-        """Fetch the mower area definition file."""
+    async def async_get_device_json_file(
+        self,
+        serial_number: str,
+        *,
+        file_prefix: str,
+        sub_category: str,
+    ) -> dict[str, Any] | list[Any]:
+        """Fetch a mower JSON file from the app-style presigned URL endpoint."""
         self._require_token()
 
         url = f"https://{self._host}/api/v1/device/v2/presigned_url"
         params = {
-            "filename": f"area_{serial_number}.txt",
+            "filename": f"{file_prefix}_{serial_number}.txt",
             "sn": serial_number,
             "category": "device",
-            "sub_category": "area",
+            "sub_category": sub_category,
             "verification_token": self.build_verification_token(serial_number),
         }
 
@@ -363,7 +830,7 @@ class AnthbotCloudApiClient:
                 if resp.status != 200:
                     body = await resp.text()
                     raise AnthbotGenieApiError(
-                        f"Area presigned URL failed ({resp.status}): {body[:300]}"
+                        f"{sub_category} presigned URL failed ({resp.status}): {body[:300]}"
                     )
                 payload = await resp.json(content_type=None)
         except ClientError as err:
@@ -372,41 +839,79 @@ class AnthbotCloudApiClient:
             raise AnthbotGenieApiError("Request timed out") from err
 
         if not isinstance(payload, dict):
-            raise AnthbotGenieApiError("Invalid area presigned URL payload type")
+            raise AnthbotGenieApiError(
+                f"Invalid {sub_category} presigned URL payload type"
+            )
         if payload.get("code") != 0:
             raise AnthbotGenieApiError(
-                f"Area presigned URL returned code={payload.get('code')}"
+                f"{sub_category} presigned URL returned code={payload.get('code')}"
             )
 
         data = payload.get("data")
         if not isinstance(data, dict):
-            raise AnthbotGenieApiError("Area presigned URL payload missing data object")
+            raise AnthbotGenieApiError(
+                f"{sub_category} presigned URL payload missing data object"
+            )
         presigned_url = data.get("presigned_url")
         if not isinstance(presigned_url, str) or not presigned_url:
-            raise AnthbotGenieApiError("Area presigned URL payload missing presigned_url")
+            raise AnthbotGenieApiError(
+                f"{sub_category} presigned URL payload missing presigned_url"
+            )
 
         try:
             async with self._session.get(presigned_url, timeout=15) as resp:
                 if resp.status != 200:
                     body = await resp.text()
                     raise AnthbotGenieApiError(
-                        f"Area definition download failed ({resp.status}): {body[:300]}"
+                        f"{sub_category} definition download failed ({resp.status}): {body[:300]}"
                     )
-                text = await resp.text()
+                raw_bytes = await resp.read()
         except ClientError as err:
             raise AnthbotGenieApiError(f"Network error: {err}") from err
         except TimeoutError as err:
             raise AnthbotGenieApiError("Request timed out") from err
 
-        try:
-            area_definition = json.loads(text)
-        except json.JSONDecodeError as err:
-            raise AnthbotGenieApiError("Area definition is not valid JSON") from err
+        definition = decode_device_definition(raw_bytes, sub_category)
 
-        if not isinstance(area_definition, dict):
+        if not isinstance(definition, (dict, list)):
+            raise AnthbotGenieApiError(
+                f"{sub_category} definition payload type is not JSON object/array"
+            )
+
+        return definition
+
+    async def async_get_device_area_definition(
+        self, serial_number: str
+    ) -> dict[str, Any]:
+        """Fetch the mower area definition file."""
+        definition = await self.async_get_device_json_file(
+            serial_number,
+            file_prefix="area",
+            sub_category="area",
+        )
+        if not isinstance(definition, dict):
             raise AnthbotGenieApiError("Area definition payload type is not an object")
+        return definition
 
-        return area_definition
+    async def async_get_device_map_definition(
+        self, serial_number: str
+    ) -> dict[str, Any] | list[Any]:
+        """Fetch the mower full-map definition file if the cloud exposes it."""
+        return await self.async_get_device_json_file(
+            serial_number,
+            file_prefix="map",
+            sub_category="map",
+        )
+
+    async def async_get_device_path_definition(
+        self, serial_number: str
+    ) -> dict[str, Any] | list[Any]:
+        """Fetch the mower path definition file if the cloud exposes it."""
+        return await self.async_get_device_json_file(
+            serial_number,
+            file_prefix="path",
+            sub_category="path",
+        )
 
     async def async_get_device_presigned_region(self, serial_number: str) -> str | None:
         """Fetch presigned_url metadata and extract AWS region."""
@@ -485,10 +990,8 @@ class AnthbotShadowApiClient:
             region_name if isinstance(region_name, str) and region_name else None
         )
         self._iot_endpoint = self._normalize_endpoint(iot_endpoint)
-        # account_client is required to fetch fresh STS credentials.
-        # It may be None for legacy callers — those will fall back to the
-        # static AWS keys and skip x-amz-security-token (likely 403 today
-        # since Anthbot rotated the static keys, but kept for safety).
+        # account_client fetches short-lived STS credentials. No static cloud
+        # credentials are embedded in this integration.
         self._account_client = account_client
         self._credentials: AnthbotTemporaryIotCredentials | None = None
         self._credentials_lock = asyncio.Lock()
@@ -516,12 +1019,19 @@ class AnthbotShadowApiClient:
         # expiration is unix seconds; allow refresh buffer
         return creds.expiration - int(time.time()) > _CREDENTIALS_REFRESH_BUFFER_SECONDS
 
+    async def async_request_all_properties(self) -> None:
+        """Compatibility hook used after service commands."""
+        await self.async_publish_service_command(cmd="app_state", data=1)
+        await self.async_publish_service_command(cmd="get_all_props", data=1)
+
     async def _async_get_credentials(
         self, *, force_refresh: bool = False
-    ) -> AnthbotTemporaryIotCredentials | None:
+    ) -> AnthbotTemporaryIotCredentials:
         """Return cached temp credentials or fetch fresh ones from STS."""
         if self._account_client is None:
-            return None
+            raise AnthbotGenieApiError(
+                "Anthbot account client is required for temporary IoT credentials"
+            )
         async with self._credentials_lock:
             if not force_refresh and self._credentials_are_valid(self._credentials):
                 return self._credentials
@@ -535,8 +1045,10 @@ class AnthbotShadowApiClient:
                     self._serial_number,
                     err,
                 )
-                # If we had stale creds, return them as last-ditch.
-                return self._credentials
+                # If we had stale creds, return them as a last-ditch attempt.
+                if self._credentials is not None:
+                    return self._credentials
+                raise
             self._credentials = creds
             # Reuse the endpoint/region the cloud sent us if available — they
             # match the policy attached to the temp creds.
@@ -594,33 +1106,19 @@ class AnthbotShadowApiClient:
         """Build the default Anthbot IoT endpoint host for a region."""
         return IOT_ENDPOINT_TEMPLATE.format(region=region_name)
 
-    def _static_access_key_id(self) -> str:
-        if self._iot_endpoint == CN_NORTHWEST_IOT_ENDPOINT:
-            return AWS_ACCESS_KEY_CN_NORTHWEST
-        if self.signing_region.startswith("cn"):
-            return AWS_ACCESS_KEY_CN
-        return AWS_ACCESS_KEY_DEFAULT
-
-    def _static_secret_access_key(self) -> str:
-        if self._iot_endpoint == CN_NORTHWEST_IOT_ENDPOINT:
-            return AWS_SECRET_KEY_CN_NORTHWEST
-        if self.signing_region.startswith("cn"):
-            return AWS_SECRET_KEY_CN
-        return AWS_SECRET_KEY_DEFAULT
-
     def _access_key_id(
         self, creds: AnthbotTemporaryIotCredentials | None = None
     ) -> str:
         if creds is not None and creds.access_key_id:
             return creds.access_key_id
-        return self._static_access_key_id()
+        raise AnthbotGenieApiError("Temporary IoT access key is unavailable")
 
     def _secret_access_key(
         self, creds: AnthbotTemporaryIotCredentials | None = None
     ) -> str:
         if creds is not None and creds.secret_access_key:
             return creds.secret_access_key
-        return self._static_secret_access_key()
+        raise AnthbotGenieApiError("Temporary IoT secret key is unavailable")
 
     @staticmethod
     def _sign(key: bytes, msg: str) -> bytes:

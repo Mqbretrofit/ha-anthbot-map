@@ -19,8 +19,10 @@ from .api import AnthbotCloudApiClient, AnthbotGenieApiError, AnthbotShadowApiCl
 from .const import (
     ATTR_AUTO_ZONES,
     ATTR_ENABLE_CUSTOM_DIRECTION,
+    ATTR_ENABLE_RAIN_PERCEPTION,
     ATTR_MOW_DIRECTION,
     ATTR_MOW_HEIGHT,
+    ATTR_RAIN_CONTINUE_TIME,
     ATTR_SERIAL_NUMBER,
     ATTR_VOICE_VOLUME,
     ATTR_ZONES,
@@ -33,10 +35,13 @@ from .const import (
     DEFAULT_AREA_CODE,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    SERVICE_CONNECT_CLOUD,
     SERVICE_RETURN_TO_DOCK,
     SERVICE_START_AUTO_ZONE_MOW,
     SERVICE_SET_CUSTOM_MOWING_DIRECTION,
     SERVICE_SET_MOW_HEIGHT,
+    SERVICE_SET_RAIN_CONTINUE_TIME,
+    SERVICE_SET_RAIN_PERCEPTION,
     SERVICE_SET_VOICE_VOLUME,
     SERVICE_START_FULL_MOW,
     SERVICE_START_ZONE_MOW,
@@ -203,8 +208,17 @@ async def _async_register_services(hass: HomeAssistant) -> None:
     async def _async_sync_after_command(
         coordinator: AnthbotGenieDataUpdateCoordinator,
     ) -> None:
+        async def _async_refresh_later() -> None:
+            await asyncio.sleep(0.35)
+            await coordinator.client.async_request_all_properties()
+            await coordinator.async_request_refresh()
+
+        hass.async_create_task(_async_refresh_later())
+
+    async def _async_sync_now(
+        coordinator: AnthbotGenieDataUpdateCoordinator,
+    ) -> None:
         await coordinator.client.async_request_all_properties()
-        await asyncio.sleep(1)
         await coordinator.async_request_refresh()
 
     base_schema = vol.Schema(
@@ -243,6 +257,24 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         },
         extra=vol.ALLOW_EXTRA,
     )
+    set_rain_continue_time_schema = vol.Schema(
+        {
+            vol.Required(ATTR_RAIN_CONTINUE_TIME): vol.All(
+                vol.Coerce(int), vol.Range(min=0, max=8)
+            ),
+            vol.Optional(ATTR_SERIAL_NUMBER): vol.Any(cv.string, [cv.string]),
+            vol.Optional("entity_id"): vol.Any(cv.entity_id, [cv.entity_id]),
+        },
+        extra=vol.ALLOW_EXTRA,
+    )
+    set_rain_perception_schema = vol.Schema(
+        {
+            vol.Required(ATTR_ENABLE_RAIN_PERCEPTION): cv.boolean,
+            vol.Optional(ATTR_SERIAL_NUMBER): vol.Any(cv.string, [cv.string]),
+            vol.Optional("entity_id"): vol.Any(cv.entity_id, [cv.entity_id]),
+        },
+        extra=vol.ALLOW_EXTRA,
+    )
     zone_schema = vol.Schema(
         {
             vol.Required(ATTR_ZONES): vol.Any(
@@ -276,6 +308,13 @@ async def _async_register_services(hass: HomeAssistant) -> None:
                 cmd="mow_start", data=1
             )
             await _async_sync_after_command(coordinator)
+
+    async def _handle_connect_cloud(service_call) -> None:
+        targets = _resolve_target_coordinators(hass, service_call.data)
+        if not targets:
+            raise AnthbotGenieApiError("No target Anthbot mower found")
+        for coordinator in targets:
+            await _async_sync_now(coordinator)
 
     async def _handle_stop_mow(service_call) -> None:
         targets = _resolve_target_coordinators(hass, service_call.data)
@@ -339,6 +378,44 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             )
             await _async_sync_after_command(coordinator)
 
+    async def _handle_set_rain_continue_time(service_call) -> None:
+        targets = _resolve_target_coordinators(hass, service_call.data)
+        if not targets:
+            raise AnthbotGenieApiError("No target Anthbot mower found")
+        rain_continue_time = int(service_call.data[ATTR_RAIN_CONTINUE_TIME])
+        for coordinator in targets:
+            rain_switch = coordinator.reported_state.get("rain_switch")
+            switch_value = 1 if rain_switch in (1, "1", True, "true", "on") else 0
+            await coordinator.client.async_publish_service_command(
+                cmd="ctl_rainer",
+                data={
+                    "switch": switch_value,
+                    "continue_time": rain_continue_time * 3600,
+                },
+            )
+            await _async_sync_after_command(coordinator)
+
+    async def _handle_set_rain_perception(service_call) -> None:
+        targets = _resolve_target_coordinators(hass, service_call.data)
+        if not targets:
+            raise AnthbotGenieApiError("No target Anthbot mower found")
+        enabled = bool(service_call.data[ATTR_ENABLE_RAIN_PERCEPTION])
+        for coordinator in targets:
+            reported_continue_time = coordinator.reported_state.get("rain_continue_time")
+            continue_time = (
+                reported_continue_time
+                if isinstance(reported_continue_time, int) and reported_continue_time > 0
+                else 10800
+            )
+            await coordinator.client.async_publish_service_command(
+                cmd="ctl_rainer",
+                data={
+                    "switch": 1 if enabled else 0,
+                    "continue_time": continue_time,
+                },
+            )
+            await _async_sync_after_command(coordinator)
+
     async def _handle_start_zone_mow(service_call) -> None:
         targets = _resolve_target_coordinators(hass, service_call.data)
         if not targets:
@@ -380,6 +457,13 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             _handle_start_full_mow,
             schema=base_schema,
         )
+    if not hass.services.has_service(DOMAIN, SERVICE_CONNECT_CLOUD):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_CONNECT_CLOUD,
+            _handle_connect_cloud,
+            schema=base_schema,
+        )
     if not hass.services.has_service(DOMAIN, SERVICE_STOP_MOW):
         hass.services.async_register(
             DOMAIN, SERVICE_STOP_MOW, _handle_stop_mow, schema=base_schema
@@ -411,6 +495,20 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             SERVICE_SET_CUSTOM_MOWING_DIRECTION,
             _handle_set_custom_mowing_direction,
             schema=set_custom_mowing_direction_schema,
+        )
+    if not hass.services.has_service(DOMAIN, SERVICE_SET_RAIN_CONTINUE_TIME):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_RAIN_CONTINUE_TIME,
+            _handle_set_rain_continue_time,
+            schema=set_rain_continue_time_schema,
+        )
+    if not hass.services.has_service(DOMAIN, SERVICE_SET_RAIN_PERCEPTION):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_RAIN_PERCEPTION,
+            _handle_set_rain_perception,
+            schema=set_rain_perception_schema,
         )
     if not hass.services.has_service(DOMAIN, SERVICE_START_ZONE_MOW):
         hass.services.async_register(
@@ -552,14 +650,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             account_client=account_client,
         )
         _async_cleanup_legacy_entities(hass, entry, device.serial_number)
+        scan_interval = max(
+            1,
+            min(
+                int(entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)),
+                DEFAULT_SCAN_INTERVAL,
+            ),
+        )
         coordinator = AnthbotGenieDataUpdateCoordinator(
             hass,
             account_client=account_client,
             client=shadow_client,
             device=device,
-            update_interval=timedelta(
-                seconds=entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-            ),
+            update_interval=timedelta(seconds=scan_interval),
         )
         await coordinator.async_refresh()
         if not coordinator.last_update_success:
@@ -590,6 +693,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 SERVICE_SET_MOW_HEIGHT,
                 SERVICE_SET_VOICE_VOLUME,
                 SERVICE_SET_CUSTOM_MOWING_DIRECTION,
+                SERVICE_CONNECT_CLOUD,
+                SERVICE_SET_RAIN_CONTINUE_TIME,
+                SERVICE_SET_RAIN_PERCEPTION,
                 SERVICE_START_ZONE_MOW,
                 SERVICE_START_AUTO_ZONE_MOW,
             ):

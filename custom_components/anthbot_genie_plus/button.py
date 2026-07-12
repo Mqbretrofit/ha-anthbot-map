@@ -25,6 +25,11 @@ class AnthbotButtonDescription(ButtonEntityDescription):
 
 BUTTONS: tuple[AnthbotButtonDescription, ...] = (
     AnthbotButtonDescription(
+        key="connect_cloud",
+        translation_key="connect_cloud",
+        name="Connect cloud",
+    ),
+    AnthbotButtonDescription(
         key="start_full_mow",
         translation_key="start_full_mow",
         name="Start full mow",
@@ -116,7 +121,9 @@ class AnthbotButtonEntity(
     async def async_press(self) -> None:
         """Run the button action."""
         key = self.entity_description.key
-        if key == "start_full_mow":
+        if key == "connect_cloud":
+            pass
+        elif key == "start_full_mow":
             await self.coordinator.client.async_publish_service_command(
                 cmd="app_state", data=1
             )
