@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.8 / map card v80 — 2026-07-12
+
+### Added
+
+- Turkish, Thai, Vietnamese, Korean, and Khmer translations.
+- Automatic language detection for all five new languages.
+
 ## 1.0.7 / map card v79 — 2026-07-12
 
 ### Fixed
