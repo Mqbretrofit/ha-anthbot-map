@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.6 / map card v78 — 2026-07-12
+
+### Added
+
+- Automatic Home Assistant language detection.
+- Manual language selector in the card settings.
+- 18 selectable languages, including simplified and traditional Chinese.
+- English fallback for missing translations.
+
+### Changed
+
+- Map labels, controls, status values, settings, diagnostics, and calibration
+  controls now use the card translation system.
+
 ## 1.0.5 / map card v77 — 2026-07-12
 
 ### Added

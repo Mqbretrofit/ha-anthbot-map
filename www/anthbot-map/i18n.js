@@ -1,0 +1,97 @@
+export const LANGUAGES = [
+  ["auto", "Automatic / Automatikus"],
+  ["en", "English"], ["hu", "Magyar"], ["de", "Deutsch"],
+  ["fr", "Français"], ["es", "Español"], ["it", "Italiano"],
+  ["pt", "Português"], ["nl", "Nederlands"], ["pl", "Polski"],
+  ["cs", "Čeština"], ["sk", "Slovenčina"], ["ro", "Română"],
+  ["da", "Dansk"], ["sv", "Svenska"], ["no", "Norsk"],
+  ["fi", "Suomi"], ["zh-CN", "简体中文"], ["zh-TW", "繁體中文"],
+];
+
+const en = {
+  language: "Language", automatic: "Automatic", waiting: "Waiting for map entity",
+  status: "Status", control: "Control", settings: "Settings", diagnostics: "Diagnostics",
+  map: "Map", expand: "Click for large view", close: "Close", zoomIn: "Zoom in", zoomOut: "Zoom out",
+  zones: "Zones", forbidden: "No-go", position: "Position", heading: "Direction",
+  start: "START", startLabel: "Start", startSub: "Mow entire area",
+  stop: "STOP", stopLabel: "Stop", stopSub: "Stop all tasks",
+  home: "HOME", homeLabel: "Dock", homeSub: "Return to dock", zoneStart: "Start zone mowing",
+  cloud: "Cloud connection", cloudSub: "Refresh data and commands",
+  customDirection: "Custom direction", rainDelay: "Delay after rain", volume: "Volume",
+  rainDetection: "Rain detection", customCutDirection: "Custom mowing direction",
+  showZones: "Show zones", showBoundary: "Show boundary", battery: "Battery",
+  charging: "Charging", connection: "Connection", cutHeight: "Cutting height",
+  mowedArea: "Mowed area", mowingTime: "Mowing time", totalArea: "Total area", error: "Error",
+  bladeLife: "Cutting components life", lineLife: "Cutting line life", dockContact: "Dock contact life",
+  lastUpdate: "Last update", calibration: "Calibration", mapFit: "Map alignment",
+  robotFit: "Robot alignment", boundaryFit: "Boundary alignment", yamlCopy: "Copy YAML",
+  up: "Up", left: "Left", right: "Right", down: "Down", narrower: "Narrower",
+  wider: "Wider", shorter: "Shorter", taller: "Taller", rotation: "Rotation", reset: "Reset",
+  switchMissing: "Switch entity not found", operationFailed: "Operation failed",
+  settingFailed: "Setting failed", status_on: "on", status_off: "off", status_standby: "standby",
+  status_paused: "paused", status_charging: "charging", status_mowing: "mowing",
+  status_returning_to_dock: "returning to dock", status_mapping: "mapping",
+  status_positioning: "positioning", status_sleeping: "sleeping", status_unknown: "unknown",
+};
+
+const translations = {
+  en,
+  hu: {
+    language: "Nyelv", automatic: "Automatikus", waiting: "Várakozás a térkép entitásra",
+    status: "Állapot", control: "Vezérlés", settings: "Beállítások", diagnostics: "Diagnosztika",
+    map: "Térkép", expand: "Kattints a nagy nézethez", close: "Bezárás", zoomIn: "Nagyítás", zoomOut: "Kicsinyítés",
+    zones: "Zónák", forbidden: "Tiltott", position: "Pozíció", heading: "Irány",
+    startLabel: "Indítás", startSub: "Teljes terület nyírása", stopLabel: "Stop", stopSub: "Minden feladat leállítása",
+    homeLabel: "Töltő", homeSub: "Vissza a töltőre", zoneStart: "Zónavágás indítása",
+    cloud: "Felhőkapcsolat", cloudSub: "Adatok és parancsok frissítése",
+    customDirection: "Egyedi irány", rainDelay: "Eső utáni várakozás", volume: "Hangerő",
+    rainDetection: "Esőérzékelés", customCutDirection: "Egyedi vágási irány",
+    showZones: "Zónák megjelenítése", showBoundary: "Határvonal megjelenítése", battery: "Akkumulátor",
+    charging: "Töltés", connection: "Kapcsolat", cutHeight: "Vágási magasság", mowedArea: "Nyírt terület",
+    mowingTime: "Nyírási idő", totalArea: "Összterület", error: "Hiba",
+    bladeLife: "Vágókések élettartama", lineLife: "Damilszál élettartama", dockContact: "Töltőérintkező élettartama",
+    lastUpdate: "Utolsó frissítés", calibration: "Kalibrálás", mapFit: "Térkép illesztése",
+    robotFit: "Robot illesztése", boundaryFit: "Határvonal illesztése", yamlCopy: "YAML másolása",
+    up: "Fel", left: "Balra", right: "Jobbra", down: "Le", narrower: "Keskenyebb",
+    wider: "Szélesebb", shorter: "Alacsonyabb", taller: "Magasabb", rotation: "Forgatás", reset: "Alaphelyzet",
+    switchMissing: "Nem található kapcsoló entitás", operationFailed: "A művelet sikertelen",
+    settingFailed: "A beállítás sikertelen", status_on: "be", status_off: "ki", status_standby: "készenlét",
+    status_paused: "szünet", status_charging: "töltés", status_mowing: "nyírás",
+    status_returning_to_dock: "vissza a töltőre", status_mapping: "térképezés",
+    status_positioning: "pozicionálás", status_sleeping: "alvás", status_unknown: "ismeretlen",
+  },
+  de: { language:"Sprache", automatic:"Automatisch", status:"Status", control:"Steuerung", settings:"Einstellungen", diagnostics:"Diagnose", map:"Karte", zones:"Zonen", forbidden:"Sperrgebiet", position:"Position", heading:"Richtung", startLabel:"Start", startSub:"Gesamte Fläche mähen", stopLabel:"Stopp", stopSub:"Alle Aufgaben stoppen", homeLabel:"Ladestation", homeSub:"Zur Ladestation", zoneStart:"Zonenmähen starten", cloud:"Cloud-Verbindung", customDirection:"Benutzerdefinierte Richtung", rainDelay:"Wartezeit nach Regen", volume:"Lautstärke", rainDetection:"Regenerkennung", showZones:"Zonen anzeigen", showBoundary:"Grenze anzeigen", battery:"Akku", charging:"Laden", connection:"Verbindung", cutHeight:"Schnitthöhe", mowedArea:"Gemähte Fläche", mowingTime:"Mähzeit", totalArea:"Gesamtfläche", error:"Fehler", calibration:"Kalibrierung", yamlCopy:"YAML kopieren" },
+  fr: { language:"Langue", automatic:"Automatique", status:"État", control:"Commande", settings:"Réglages", diagnostics:"Diagnostic", map:"Carte", zones:"Zones", forbidden:"Zone interdite", position:"Position", heading:"Direction", startLabel:"Démarrer", startSub:"Tondre toute la zone", stopLabel:"Arrêter", stopSub:"Arrêter toutes les tâches", homeLabel:"Station", homeSub:"Retour à la station", zoneStart:"Démarrer la tonte de zone", cloud:"Connexion cloud", customDirection:"Direction personnalisée", rainDelay:"Délai après pluie", volume:"Volume", rainDetection:"Détection de pluie", showZones:"Afficher les zones", showBoundary:"Afficher la limite", battery:"Batterie", charging:"Charge", connection:"Connexion", cutHeight:"Hauteur de coupe", mowedArea:"Surface tondue", mowingTime:"Temps de tonte", totalArea:"Surface totale", error:"Erreur", calibration:"Étalonnage", yamlCopy:"Copier le YAML" },
+  es: { language:"Idioma", automatic:"Automático", status:"Estado", control:"Control", settings:"Ajustes", diagnostics:"Diagnóstico", map:"Mapa", zones:"Zonas", forbidden:"Zona prohibida", position:"Posición", heading:"Dirección", startLabel:"Iniciar", startSub:"Cortar toda el área", stopLabel:"Detener", stopSub:"Detener todas las tareas", homeLabel:"Base", homeSub:"Volver a la base", zoneStart:"Iniciar corte de zona", cloud:"Conexión a la nube", customDirection:"Dirección personalizada", rainDelay:"Espera tras lluvia", volume:"Volumen", rainDetection:"Detección de lluvia", showZones:"Mostrar zonas", showBoundary:"Mostrar límite", battery:"Batería", charging:"Cargando", connection:"Conexión", cutHeight:"Altura de corte", mowedArea:"Área cortada", mowingTime:"Tiempo de corte", totalArea:"Área total", error:"Error", calibration:"Calibración", yamlCopy:"Copiar YAML" },
+  it: { language:"Lingua", automatic:"Automatico", status:"Stato", control:"Controllo", settings:"Impostazioni", diagnostics:"Diagnostica", map:"Mappa", zones:"Zone", forbidden:"Zona vietata", position:"Posizione", heading:"Direzione", startLabel:"Avvia", startSub:"Taglia tutta l'area", stopLabel:"Stop", stopSub:"Ferma tutte le attività", homeLabel:"Base", homeSub:"Ritorna alla base", zoneStart:"Avvia taglio zona", cloud:"Connessione cloud", customDirection:"Direzione personalizzata", rainDelay:"Attesa dopo pioggia", volume:"Volume", rainDetection:"Rilevamento pioggia", showZones:"Mostra zone", showBoundary:"Mostra confine", battery:"Batteria", charging:"Ricarica", connection:"Connessione", cutHeight:"Altezza di taglio", mowedArea:"Area tagliata", mowingTime:"Tempo di taglio", totalArea:"Area totale", error:"Errore", calibration:"Calibrazione", yamlCopy:"Copia YAML" },
+  pt: { language:"Idioma", automatic:"Automático", status:"Estado", control:"Controlo", settings:"Definições", diagnostics:"Diagnóstico", map:"Mapa", zones:"Zonas", forbidden:"Zona proibida", position:"Posição", heading:"Direção", startLabel:"Iniciar", startSub:"Cortar toda a área", stopLabel:"Parar", stopSub:"Parar todas as tarefas", homeLabel:"Base", homeSub:"Voltar à base", zoneStart:"Iniciar corte da zona", cloud:"Ligação à nuvem", customDirection:"Direção personalizada", rainDelay:"Espera após chuva", volume:"Volume", rainDetection:"Deteção de chuva", showZones:"Mostrar zonas", showBoundary:"Mostrar limite", battery:"Bateria", charging:"A carregar", connection:"Ligação", cutHeight:"Altura de corte", mowedArea:"Área cortada", mowingTime:"Tempo de corte", totalArea:"Área total", error:"Erro", calibration:"Calibração", yamlCopy:"Copiar YAML" },
+  nl: { language:"Taal", automatic:"Automatisch", status:"Status", control:"Bediening", settings:"Instellingen", diagnostics:"Diagnose", map:"Kaart", zones:"Zones", forbidden:"Verboden zone", position:"Positie", heading:"Richting", startLabel:"Start", startSub:"Hele gebied maaien", stopLabel:"Stop", stopSub:"Alle taken stoppen", homeLabel:"Laadstation", homeSub:"Terug naar laadstation", zoneStart:"Zonemaaien starten", cloud:"Cloudverbinding", customDirection:"Aangepaste richting", rainDelay:"Wachttijd na regen", volume:"Volume", rainDetection:"Regendetectie", showZones:"Zones tonen", showBoundary:"Grens tonen", battery:"Accu", charging:"Laden", connection:"Verbinding", cutHeight:"Maaihoogte", mowedArea:"Gemaaid gebied", mowingTime:"Maaiduur", totalArea:"Totale oppervlakte", error:"Fout", calibration:"Kalibratie", yamlCopy:"YAML kopiëren" },
+  pl: { language:"Język", automatic:"Automatycznie", status:"Stan", control:"Sterowanie", settings:"Ustawienia", diagnostics:"Diagnostyka", map:"Mapa", zones:"Strefy", forbidden:"Strefa zakazana", position:"Pozycja", heading:"Kierunek", startLabel:"Start", startSub:"Koś cały obszar", stopLabel:"Stop", stopSub:"Zatrzymaj wszystkie zadania", homeLabel:"Stacja", homeSub:"Powrót do stacji", zoneStart:"Rozpocznij koszenie strefy", cloud:"Połączenie z chmurą", customDirection:"Własny kierunek", rainDelay:"Opóźnienie po deszczu", volume:"Głośność", rainDetection:"Wykrywanie deszczu", showZones:"Pokaż strefy", showBoundary:"Pokaż granicę", battery:"Bateria", charging:"Ładowanie", connection:"Połączenie", cutHeight:"Wysokość koszenia", mowedArea:"Skoszony obszar", mowingTime:"Czas koszenia", totalArea:"Całkowity obszar", error:"Błąd", calibration:"Kalibracja", yamlCopy:"Kopiuj YAML" },
+  cs: { language:"Jazyk", automatic:"Automaticky", status:"Stav", control:"Ovládání", settings:"Nastavení", diagnostics:"Diagnostika", map:"Mapa", zones:"Zóny", forbidden:"Zakázaná zóna", position:"Poloha", heading:"Směr", startLabel:"Spustit", stopLabel:"Zastavit", homeLabel:"Stanice", homeSub:"Návrat do stanice", zoneStart:"Spustit sečení zóny", cloud:"Cloudové připojení", customDirection:"Vlastní směr", rainDelay:"Čekání po dešti", volume:"Hlasitost", rainDetection:"Detekce deště", showZones:"Zobrazit zóny", showBoundary:"Zobrazit hranici", battery:"Baterie", charging:"Nabíjení", connection:"Připojení", cutHeight:"Výška sečení", mowedArea:"Posečená plocha", mowingTime:"Doba sečení", totalArea:"Celková plocha", error:"Chyba", calibration:"Kalibrace", yamlCopy:"Kopírovat YAML" },
+  sk: { language:"Jazyk", automatic:"Automaticky", status:"Stav", control:"Ovládanie", settings:"Nastavenia", diagnostics:"Diagnostika", map:"Mapa", zones:"Zóny", forbidden:"Zakázaná zóna", position:"Poloha", heading:"Smer", startLabel:"Spustiť", stopLabel:"Zastaviť", homeLabel:"Stanica", homeSub:"Návrat do stanice", zoneStart:"Spustiť kosenie zóny", cloud:"Cloudové pripojenie", customDirection:"Vlastný smer", rainDelay:"Čakanie po daždi", volume:"Hlasitosť", rainDetection:"Detekcia dažďa", showZones:"Zobraziť zóny", showBoundary:"Zobraziť hranicu", battery:"Batéria", charging:"Nabíjanie", connection:"Pripojenie", cutHeight:"Výška kosenia", mowedArea:"Pokosená plocha", mowingTime:"Čas kosenia", totalArea:"Celková plocha", error:"Chyba", calibration:"Kalibrácia", yamlCopy:"Kopírovať YAML" },
+  ro: { language:"Limbă", automatic:"Automat", status:"Stare", control:"Control", settings:"Setări", diagnostics:"Diagnostic", map:"Hartă", zones:"Zone", forbidden:"Zonă interzisă", position:"Poziție", heading:"Direcție", startLabel:"Pornire", stopLabel:"Oprire", homeLabel:"Stație", homeSub:"Înapoi la stație", zoneStart:"Pornește tunderea zonei", cloud:"Conexiune cloud", customDirection:"Direcție personalizată", rainDelay:"Așteptare după ploaie", volume:"Volum", rainDetection:"Detectare ploaie", showZones:"Afișează zonele", showBoundary:"Afișează limita", battery:"Baterie", charging:"Încărcare", connection:"Conexiune", cutHeight:"Înălțime de tăiere", mowedArea:"Suprafață tunsă", mowingTime:"Timp de tundere", totalArea:"Suprafață totală", error:"Eroare", calibration:"Calibrare", yamlCopy:"Copiază YAML" },
+  da: { language:"Sprog", automatic:"Automatisk", status:"Status", control:"Styring", settings:"Indstillinger", diagnostics:"Diagnostik", map:"Kort", zones:"Zoner", forbidden:"Forbudszone", position:"Position", heading:"Retning", startLabel:"Start", stopLabel:"Stop", homeLabel:"Ladestation", homeSub:"Tilbage til ladestation", zoneStart:"Start zoneklipning", cloud:"Cloudforbindelse", customDirection:"Tilpasset retning", rainDelay:"Ventetid efter regn", volume:"Lydstyrke", rainDetection:"Regnregistrering", showZones:"Vis zoner", showBoundary:"Vis grænse", battery:"Batteri", charging:"Opladning", connection:"Forbindelse", cutHeight:"Klippehøjde", mowedArea:"Klippet område", mowingTime:"Klippetid", totalArea:"Samlet område", error:"Fejl", calibration:"Kalibrering", yamlCopy:"Kopiér YAML" },
+  sv: { language:"Språk", automatic:"Automatiskt", status:"Status", control:"Styrning", settings:"Inställningar", diagnostics:"Diagnostik", map:"Karta", zones:"Zoner", forbidden:"Förbjuden zon", position:"Position", heading:"Riktning", startLabel:"Start", stopLabel:"Stopp", homeLabel:"Laddstation", homeSub:"Tillbaka till laddstation", zoneStart:"Starta zonklippning", cloud:"Molnanslutning", customDirection:"Anpassad riktning", rainDelay:"Väntetid efter regn", volume:"Volym", rainDetection:"Regndetektering", showZones:"Visa zoner", showBoundary:"Visa gräns", battery:"Batteri", charging:"Laddning", connection:"Anslutning", cutHeight:"Klipphöjd", mowedArea:"Klippt område", mowingTime:"Klipptid", totalArea:"Total yta", error:"Fel", calibration:"Kalibrering", yamlCopy:"Kopiera YAML" },
+  no: { language:"Språk", automatic:"Automatisk", status:"Status", control:"Styring", settings:"Innstillinger", diagnostics:"Diagnostikk", map:"Kart", zones:"Soner", forbidden:"Forbudssone", position:"Posisjon", heading:"Retning", startLabel:"Start", stopLabel:"Stopp", homeLabel:"Ladestasjon", homeSub:"Tilbake til ladestasjon", zoneStart:"Start soneklipping", cloud:"Skytilkobling", customDirection:"Tilpasset retning", rainDelay:"Ventetid etter regn", volume:"Volum", rainDetection:"Regndeteksjon", showZones:"Vis soner", showBoundary:"Vis grense", battery:"Batteri", charging:"Lading", connection:"Tilkobling", cutHeight:"Klippehøyde", mowedArea:"Klippet område", mowingTime:"Klippetid", totalArea:"Totalt område", error:"Feil", calibration:"Kalibrering", yamlCopy:"Kopier YAML" },
+  fi: { language:"Kieli", automatic:"Automaattinen", status:"Tila", control:"Ohjaus", settings:"Asetukset", diagnostics:"Diagnostiikka", map:"Kartta", zones:"Alueet", forbidden:"Kielletty alue", position:"Sijainti", heading:"Suunta", startLabel:"Käynnistä", stopLabel:"Pysäytä", homeLabel:"Latausasema", homeSub:"Palaa latausasemalle", zoneStart:"Aloita alueen leikkuu", cloud:"Pilviyhteys", customDirection:"Mukautettu suunta", rainDelay:"Odotus sateen jälkeen", volume:"Äänenvoimakkuus", rainDetection:"Sateen tunnistus", showZones:"Näytä alueet", showBoundary:"Näytä raja", battery:"Akku", charging:"Lataus", connection:"Yhteys", cutHeight:"Leikkuukorkeus", mowedArea:"Leikattu alue", mowingTime:"Leikkuuaika", totalArea:"Kokonaisalue", error:"Virhe", calibration:"Kalibrointi", yamlCopy:"Kopioi YAML" },
+  "zh-CN": { language:"语言", automatic:"自动", waiting:"等待地图实体", status:"状态", control:"控制", settings:"设置", diagnostics:"诊断", map:"地图", expand:"点击查看大图", close:"关闭", zoomIn:"放大", zoomOut:"缩小", zones:"区域", forbidden:"禁区", position:"位置", heading:"方向", startLabel:"开始", startSub:"修剪整个区域", stopLabel:"停止", stopSub:"停止所有任务", homeLabel:"充电座", homeSub:"返回充电座", zoneStart:"开始区域修剪", cloud:"云连接", cloudSub:"刷新数据和命令", customDirection:"自定义方向", rainDelay:"雨后等待", volume:"音量", rainDetection:"雨水检测", customCutDirection:"自定义修剪方向", showZones:"显示区域", showBoundary:"显示边界", battery:"电池", charging:"充电", connection:"连接", cutHeight:"割草高度", mowedArea:"已修剪面积", mowingTime:"修剪时间", totalArea:"总面积", error:"错误", bladeLife:"刀片寿命", lineLife:"割草线寿命", dockContact:"充电触点寿命", lastUpdate:"最后更新", calibration:"校准", mapFit:"地图校准", robotFit:"机器人校准", boundaryFit:"边界校准", yamlCopy:"复制 YAML", up:"上", left:"左", right:"右", down:"下", narrower:"变窄", wider:"变宽", shorter:"变短", taller:"变高", rotation:"旋转", reset:"重置", status_on:"开", status_off:"关", status_standby:"待机", status_paused:"暂停", status_charging:"充电中", status_mowing:"修剪中", status_returning_to_dock:"返回充电座", status_mapping:"建图中", status_positioning:"定位中", status_sleeping:"休眠", status_unknown:"未知" },
+  "zh-TW": { language:"語言", automatic:"自動", waiting:"等待地圖實體", status:"狀態", control:"控制", settings:"設定", diagnostics:"診斷", map:"地圖", expand:"點擊查看大圖", close:"關閉", zoomIn:"放大", zoomOut:"縮小", zones:"區域", forbidden:"禁區", position:"位置", heading:"方向", startLabel:"開始", startSub:"修剪整個區域", stopLabel:"停止", stopSub:"停止所有任務", homeLabel:"充電座", homeSub:"返回充電座", zoneStart:"開始區域修剪", cloud:"雲端連線", cloudSub:"重新整理資料和命令", customDirection:"自訂方向", rainDelay:"雨後等待", volume:"音量", rainDetection:"雨水偵測", customCutDirection:"自訂修剪方向", showZones:"顯示區域", showBoundary:"顯示邊界", battery:"電池", charging:"充電", connection:"連線", cutHeight:"割草高度", mowedArea:"已修剪面積", mowingTime:"修剪時間", totalArea:"總面積", error:"錯誤", bladeLife:"刀片壽命", lineLife:"割草線壽命", dockContact:"充電接點壽命", lastUpdate:"最後更新", calibration:"校準", mapFit:"地圖校準", robotFit:"機器人校準", boundaryFit:"邊界校準", yamlCopy:"複製 YAML", up:"上", left:"左", right:"右", down:"下", narrower:"變窄", wider:"變寬", shorter:"變短", taller:"變高", rotation:"旋轉", reset:"重設", status_on:"開", status_off:"關", status_standby:"待機", status_paused:"暫停", status_charging:"充電中", status_mowing:"修剪中", status_returning_to_dock:"返回充電座", status_mapping:"建圖中", status_positioning:"定位中", status_sleeping:"休眠", status_unknown:"未知" },
+};
+
+export function normalizeLanguage(value) {
+  const raw = String(value || "en").replace("_", "-");
+  const lower = raw.toLowerCase();
+  if (lower.startsWith("zh")) return /tw|hk|hant/.test(lower) ? "zh-TW" : "zh-CN";
+  const short = lower.split("-")[0];
+  if (short === "nb" || short === "nn") return "no";
+  return translations[short] ? short : "en";
+}
+
+export function resolveLanguage(selection, hass) {
+  if (selection && selection !== "auto") return normalizeLanguage(selection);
+  return normalizeLanguage(hass?.locale?.language || hass?.language || navigator.language);
+}
+
+export function translate(language, key) {
+  return translations[language]?.[key] ?? en[key] ?? key;
+}

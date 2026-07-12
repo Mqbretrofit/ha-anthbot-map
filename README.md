@@ -1,5 +1,7 @@
 # Anthbot Genie Plus Map for Home Assistant
 
+[English](README.md) | [Magyar](README_HU.md)
+
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -30,6 +32,8 @@ robot on a top-down photograph of the garden.
 - visible position and direction badges
 - robot heading calculated like the official app from milliradian `pose.yaw`
 - generated YAML can be copied from the card calibration panel
+- automatic Home Assistant language detection and manual language selection
+- 18 selectable languages, including simplified and traditional Chinese
 
 Tested primarily with Genie-series mowers. Cloud fields and available commands
 can vary by mower model and firmware.
@@ -86,7 +90,7 @@ The resulting main file must be:
 Add the Lovelace JavaScript resource:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=77
+/local/anthbot-map/anthbot-map-card.js?v=78
 ```
 
 Resource type: **JavaScript module**.
@@ -204,13 +208,28 @@ robot_image_rotation: 90
 
 Both values are degrees.
 
+## Language
+
+By default the card follows the Home Assistant user-interface language. Open
+the card's **Settings** panel to select a different language. The selection is
+stored in the browser and is also included in copied YAML.
+
+```yaml
+language: auto
+```
+
+Supported choices: English, Hungarian, German, French, Spanish, Italian,
+Portuguese, Dutch, Polish, Czech, Slovak, Romanian, Danish, Swedish, Norwegian,
+Finnish, simplified Chinese, and traditional Chinese. Unsupported languages
+fall back to English.
+
 ## Updating
 
 After updating the card files, increment the query string in the Lovelace
 resource URL to avoid browser caching, for example:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=77
+/local/anthbot-map/anthbot-map-card.js?v=78
 ```
 
 Then restart Home Assistant and hard-refresh the browser.
@@ -221,7 +240,7 @@ Then restart Home Assistant and hard-refresh the browser.
 
 - confirm the resource is a JavaScript module
 - confirm `/config/www/anthbot-map/anthbot-map-card.js` exists
-- open `/local/anthbot-map/anthbot-map-card.js?v=77` directly in the browser
+- open `/local/anthbot-map/anthbot-map-card.js?v=78` directly in the browser
 - hard-refresh with `Ctrl+Shift+R`
 
 ### Map or robot is missing
@@ -233,7 +252,7 @@ Then restart Home Assistant and hard-refresh the browser.
 
 ### Direction is limited to roughly -40°…+40°
 
-An older card version is still cached. Version 77 converts milliradians
+An older card version is still cached. Version 78 converts milliradians
 correctly. Update the resource URL and hard-refresh the browser.
 
 ### Reporting problems

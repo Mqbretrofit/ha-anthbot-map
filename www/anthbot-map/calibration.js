@@ -133,6 +133,10 @@ export function cardToYaml(config = {}, calibration, robotCalibration, decodedBo
     lines.push(`name: ${quoteYaml(config.name)}`);
   }
 
+  if (config.language) {
+    lines.push(`language: ${quoteYaml(config.language)}`);
+  }
+
   if (config.image) {
     lines.push(`image: ${quoteYaml(config.image)}`);
   }

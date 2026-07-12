@@ -26,6 +26,8 @@ a töltőt és a megtett útvonalat a kert saját felülnézeti fényképén jel
 - látható pozíció- és iránykijelzés
 - a hivatalos alkalmazással megegyező milliradiános irányszámítás
 - a kalibrálópanelen elkészített YAML közvetlenül kimásolható
+- a Home Assistant nyelvének automatikus felismerése és kézi nyelvválasztás
+- 18 választható nyelv, köztük az egyszerűsített és hagyományos kínai
 
 Elsősorban Genie sorozatú fűnyírókkal tesztelve. Az elérhető adatok és
 parancsok modellenként és firmware-verziónként eltérhetnek.
@@ -77,7 +79,7 @@ A fő fájl végleges helye:
 Add hozzá ezt a Lovelace JavaScript-erőforrást:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=77
+/local/anthbot-map/anthbot-map-card.js?v=78
 ```
 
 Az erőforrás típusa: **JavaScript module**. Az erőforráskezelő általában a
@@ -181,6 +183,20 @@ robot_image_rotation: 90
 
 Mindkét érték fokban értendő.
 
+## Nyelv kiválasztása
+
+Alapértelmezésben a kártya a Home Assistant kezelőfelületének nyelvét követi.
+A kártya **Beállítások** paneljén ettől eltérő nyelv is választható. A választás
+a böngészőben megmarad, és a kimásolt YAML-ba is bekerül.
+
+```yaml
+language: auto
+```
+
+Elérhető nyelvek: angol, magyar, német, francia, spanyol, olasz, portugál,
+holland, lengyel, cseh, szlovák, román, dán, svéd, norvég, finn, egyszerűsített
+kínai és hagyományos kínai. Nem támogatott nyelvnél a kártya angolra vált.
+
 ## Frissítés
 
 A kártyafájlok frissítése után módosítsd a Lovelace-erőforrás címének végén a
@@ -193,7 +209,7 @@ Home Assistantot és nyomj `Ctrl+Shift+R`-t.
 
 - ellenőrizd, hogy az erőforrás típusa JavaScript module
 - ellenőrizd a `/config/www/anthbot-map/anthbot-map-card.js` fájlt
-- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=77` címet
+- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=78` címet
 - frissítsd az oldalt `Ctrl+Shift+R` használatával
 
 ### Nem látható a térkép vagy a robot
@@ -205,7 +221,7 @@ Home Assistantot és nyomj `Ctrl+Shift+R`-t.
 
 ### Az irány csak körülbelül −40° és +40° között változik
 
-A böngésző valószínűleg régebbi kártyaverziót használ. A 77-es verzió már
+A böngésző valószínűleg régebbi kártyaverziót használ. A 78-as verzió már
 helyesen váltja át a milliradiánt. Frissítsd az erőforrás címét, majd nyomj
 `Ctrl+Shift+R`-t.
 

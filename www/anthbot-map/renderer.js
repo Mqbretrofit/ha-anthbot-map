@@ -1,4 +1,4 @@
-﻿import { createGeometry, getBoundaryPaths, getWorldBounds, getZonePoints, getZones, normalizePoints } from "./geometry.js?v=77";
+﻿import { createGeometry, getBoundaryPaths, getWorldBounds, getZonePoints, getZones, normalizePoints } from "./geometry.js?v=78";
 
 const COLORS = Object.freeze({
   background: "#18202a",
@@ -524,7 +524,7 @@ export class AnthbotMapRenderer {
       ctx.fill();
       ctx.stroke();
 
-      this.drawZoneLabel(ctx, screenPoints, zoneLabel(zone, isNoGo));
+      this.drawZoneLabel(ctx, screenPoints, zoneLabel(zone, isNoGo, this.options.noGoLabel));
     }
   }
 
@@ -1021,10 +1021,10 @@ function decodeRasterRuns(raster, width, height) {
   return pixels;
 }
 
-function zoneLabel(zone, isNoGo) {
+function zoneLabel(zone, isNoGo, noGoLabel = "No-go") {
   if (isNoGo) {
     const name = String(zone?.name || zone?.label || "").trim();
-    return name && !/^zone\s*\d+$/i.test(name) ? name : "Tiltott";
+    return name && !/^zone\s*\d+$/i.test(name) ? name : noGoLabel;
   }
 
   const name = String(zone?.name || zone?.label || "").trim();

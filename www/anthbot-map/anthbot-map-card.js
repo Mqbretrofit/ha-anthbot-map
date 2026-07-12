@@ -1,4 +1,5 @@
-﻿import { AnthbotMapRenderer } from "./renderer.js?v=77";
+﻿import { AnthbotMapRenderer } from "./renderer.js?v=78";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=78";
 import {
   adjustCalibration,
   cardToYaml,
@@ -6,7 +7,7 @@ import {
   readDecodedBoundaryCalibration,
   readRobotCalibration,
   resetCalibration,
-} from "./calibration.js?v=77";
+} from "./calibration.js?v=78";
 
 const ENTITY_MAP = {
   battery: ["sensor", ["battery_level"]],
@@ -60,6 +61,7 @@ class AnthbotMapCard extends HTMLElement {
     this.showDecodedBoundary = true;
     this.showZones = true;
     this.optimisticSettings = new Map();
+    this.selectedLanguage = "auto";
   }
 
   setConfig(config) {
@@ -68,6 +70,7 @@ class AnthbotMapCard extends HTMLElement {
     }
 
     this.config = config;
+    this.selectedLanguage = config.language || window.localStorage.getItem("anthbot-map-language") || "auto";
     this.stopRefreshTimer();
     window.clearTimeout(this.pendingRefreshTimer);
     this.calibration = readCalibration(config);
@@ -79,10 +82,23 @@ class AnthbotMapCard extends HTMLElement {
   }
 
   set hass(hass) {
+    const previousLanguage = this.language;
     this._hass = hass;
     this.entity = hass.states[this.config.entity];
     this.startRefreshTimer();
-    this.updateRenderer();
+    if (previousLanguage !== this.language) {
+      this.render();
+    } else {
+      this.updateRenderer();
+    }
+  }
+
+  get language() {
+    return resolveLanguage(this.selectedLanguage, this._hass);
+  }
+
+  t(key) {
+    return translate(this.language, key);
   }
 
   disconnectedCallback() {
@@ -101,64 +117,64 @@ class AnthbotMapCard extends HTMLElement {
     const root = this.shadowRoot;
     root.innerHTML = `
       <ha-card>
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=77")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=78")}">
         <section class="app-shell">
           <div class="top-menu">
             <div>
               <div class="menu-title">${this.config.name || "Anthbot Map"}</div>
-              <div class="menu-subtitle" data-role="state">Varakozas a terkep entity-re</div>
+              <div class="menu-subtitle" data-role="state">${this.t("waiting")}</div>
             </div>
             <div class="mini-status">
               <div class="battery-ring" data-role="battery-ring">
                 <span data-role="battery-value">--</span>
               </div>
               <div class="status-copy">
-                <span class="status-label">Allapot</span>
+                <span class="status-label">${this.t("status")}</span>
                 <strong data-role="mower-status">-</strong>
               </div>
             </div>
           </div>
           <div class="panel-tabs">
-            <button type="button" data-panel="control">Vezerles</button>
-            <button type="button" data-panel="settings">Beallitasok</button>
-            <button type="button" data-panel="status">Allapot</button>
-            <button type="button" data-panel="diagnostics">Diagnosztika</button>
+            <button type="button" data-panel="control">${this.t("control")}</button>
+            <button type="button" data-panel="settings">${this.t("settings")}</button>
+            <button type="button" data-panel="status">${this.t("status")}</button>
+            <button type="button" data-panel="diagnostics">${this.t("diagnostics")}</button>
           </div>
         </section>
         <div class="canvas-wrap">
           <canvas></canvas>
           <div class="map-overlay map-title">
             <div class="name">${this.config.name || "Anthbot Map"}</div>
-            <div class="state" data-role="map-state">Varakozas a terkep entity-re</div>
+            <div class="state" data-role="map-state">${this.t("waiting")}</div>
           </div>
           <div class="map-overlay preview-hint">
-            <strong>Terkep</strong>
-            <span>Kattints a nagy nezethez</span>
+            <strong>${this.t("map")}</strong>
+            <span>${this.t("expand")}</span>
           </div>
           <div class="map-overlay map-actions">
-            <button type="button" data-action="close-map" title="Bezaras">&times;</button>
-            <button type="button" data-action="zoom-in" title="Nagyitas">+</button>
-            <button type="button" data-action="zoom-out" title="Kicsinyites">-</button>
+            <button type="button" data-action="close-map" title="${this.t("close")}">&times;</button>
+            <button type="button" data-action="zoom-in" title="${this.t("zoomIn")}">+</button>
+            <button type="button" data-action="zoom-out" title="${this.t("zoomOut")}">-</button>
           </div>
           <div class="map-overlay map-badges">
-            <span data-role="zone-count">Zonak: -</span>
-            <span data-role="pose">Pozicio: -</span>
-            <span data-role="heading">Irány: -</span>
+            <span data-role="zone-count">${this.t("zones")}: -</span>
+            <span data-role="pose">${this.t("position")}: -</span>
+            <span data-role="heading">${this.t("heading")}: -</span>
           </div>
           <div class="map-overlay command-dock">
             <div class="zone-strip" data-role="zone-controls"></div>
             <div class="mower-controls">
               <button class="command start" type="button" data-command="start">
-                <span class="command-icon">START</span>
-                <span>Inditas</span>
+                <span class="command-icon">${this.t("start")}</span>
+                <span>${this.t("startLabel")}</span>
               </button>
               <button class="command stop" type="button" data-command="stop">
-                <span class="command-icon">STOP</span>
-                <span>Stop</span>
+                <span class="command-icon">${this.t("stop")}</span>
+                <span>${this.t("stopLabel")}</span>
               </button>
               <button class="command dock" type="button" data-command="dock">
-                <span class="command-icon">HOME</span>
-                <span>Tolto</span>
+                <span class="command-icon">${this.t("home")}</span>
+                <span>${this.t("homeLabel")}</span>
               </button>
             </div>
           </div>
@@ -167,52 +183,52 @@ class AnthbotMapCard extends HTMLElement {
           <div class="panel-body" data-role="panel-body"></div>
         </section>
         <details class="calibration">
-          <summary>Kalibralas</summary>
-          <div class="calibration-title">Terkep illesztese</div>
+          <summary>${this.t("calibration")}</summary>
+          <div class="calibration-title">${this.t("mapFit")}</div>
           <div class="calibration-grid">
-            <button type="button" data-calibration="up">Fel</button>
-            <button type="button" data-calibration="left">Balra</button>
-            <button type="button" data-calibration="right">Jobbra</button>
-            <button type="button" data-calibration="down">Le</button>
-            <button type="button" data-calibration="narrower">Keskenyebb</button>
-            <button type="button" data-calibration="wider">Szelesebb</button>
-            <button type="button" data-calibration="shorter">Alacsonyabb</button>
-            <button type="button" data-calibration="taller">Magasabb</button>
-            <button type="button" data-calibration="rotate-left">Forgatas -</button>
-            <button type="button" data-calibration="rotate-right">Forgatas +</button>
+            <button type="button" data-calibration="up">${this.t("up")}</button>
+            <button type="button" data-calibration="left">${this.t("left")}</button>
+            <button type="button" data-calibration="right">${this.t("right")}</button>
+            <button type="button" data-calibration="down">${this.t("down")}</button>
+            <button type="button" data-calibration="narrower">${this.t("narrower")}</button>
+            <button type="button" data-calibration="wider">${this.t("wider")}</button>
+            <button type="button" data-calibration="shorter">${this.t("shorter")}</button>
+            <button type="button" data-calibration="taller">${this.t("taller")}</button>
+            <button type="button" data-calibration="rotate-left">${this.t("rotation")} -</button>
+            <button type="button" data-calibration="rotate-right">${this.t("rotation")} +</button>
           </div>
-          <div class="calibration-title">Robot illesztese</div>
+          <div class="calibration-title">${this.t("robotFit")}</div>
           <div class="calibration-grid">
-            <button type="button" data-robot-calibration="up">Robot fel</button>
-            <button type="button" data-robot-calibration="left">Robot balra</button>
-            <button type="button" data-robot-calibration="right">Robot jobbra</button>
-            <button type="button" data-robot-calibration="down">Robot le</button>
-            <button type="button" data-robot-calibration="narrower">Robot kisebb</button>
-            <button type="button" data-robot-calibration="wider">Robot nagyobb</button>
-            <button type="button" data-robot-calibration="rotate-left">Robot forgatas -</button>
-            <button type="button" data-robot-calibration="rotate-right">Robot forgatas +</button>
+            <button type="button" data-robot-calibration="up">${this.t("up")}</button>
+            <button type="button" data-robot-calibration="left">${this.t("left")}</button>
+            <button type="button" data-robot-calibration="right">${this.t("right")}</button>
+            <button type="button" data-robot-calibration="down">${this.t("down")}</button>
+            <button type="button" data-robot-calibration="narrower">${this.t("narrower")}</button>
+            <button type="button" data-robot-calibration="wider">${this.t("wider")}</button>
+            <button type="button" data-robot-calibration="rotate-left">${this.t("rotation")} -</button>
+            <button type="button" data-robot-calibration="rotate-right">${this.t("rotation")} +</button>
             <button type="button" data-robot-calibration="rotate-left-large">Robot irany -15</button>
             <button type="button" data-robot-calibration="rotate-right-large">Robot irany +15</button>
             <button type="button" data-robot-calibration="rotate-around">Robot irany 180</button>
-            <button type="button" data-action="reset-robot">Robot alaphelyzet</button>
+            <button type="button" data-action="reset-robot">${this.t("reset")}</button>
           </div>
-          <div class="calibration-title">Hatarvonal illesztese</div>
+          <div class="calibration-title">${this.t("boundaryFit")}</div>
           <div class="calibration-grid">
-            <button type="button" data-boundary-calibration="up">Hatar fel</button>
-            <button type="button" data-boundary-calibration="left">Hatar balra</button>
-            <button type="button" data-boundary-calibration="right">Hatar jobbra</button>
-            <button type="button" data-boundary-calibration="down">Hatar le</button>
-            <button type="button" data-boundary-calibration="narrower">Hatar keskenyebb</button>
-            <button type="button" data-boundary-calibration="wider">Hatar szelesebb</button>
-            <button type="button" data-boundary-calibration="shorter">Hatar alacsonyabb</button>
-            <button type="button" data-boundary-calibration="taller">Hatar magasabb</button>
-            <button type="button" data-boundary-calibration="rotate-left">Hatar forgatas -</button>
-            <button type="button" data-boundary-calibration="rotate-right">Hatar forgatas +</button>
-            <button type="button" data-action="reset-boundary">Hatar alaphelyzet</button>
+            <button type="button" data-boundary-calibration="up">${this.t("up")}</button>
+            <button type="button" data-boundary-calibration="left">${this.t("left")}</button>
+            <button type="button" data-boundary-calibration="right">${this.t("right")}</button>
+            <button type="button" data-boundary-calibration="down">${this.t("down")}</button>
+            <button type="button" data-boundary-calibration="narrower">${this.t("narrower")}</button>
+            <button type="button" data-boundary-calibration="wider">${this.t("wider")}</button>
+            <button type="button" data-boundary-calibration="shorter">${this.t("shorter")}</button>
+            <button type="button" data-boundary-calibration="taller">${this.t("taller")}</button>
+            <button type="button" data-boundary-calibration="rotate-left">${this.t("rotation")} -</button>
+            <button type="button" data-boundary-calibration="rotate-right">${this.t("rotation")} +</button>
+            <button type="button" data-action="reset-boundary">${this.t("reset")}</button>
           </div>
           <div class="yaml-row">
             <textarea readonly data-role="yaml"></textarea>
-            <button type="button" data-action="copy-yaml">YAML masolasa</button>
+            <button type="button" data-action="copy-yaml">${this.t("yamlCopy")}</button>
           </div>
         </details>
       </ha-card>
@@ -323,7 +339,7 @@ class AnthbotMapCard extends HTMLElement {
 
     const zoneCount = this.shadowRoot.querySelector('[data-role="zone-count"]');
     if (zoneCount) {
-      zoneCount.textContent = `Zonak: ${customAreas} / Tiltott: ${noGoAreas}`;
+      zoneCount.textContent = `${this.t("zones")}: ${customAreas} / ${this.t("forbidden")}: ${noGoAreas}`;
     }
 
     const poseBadge = this.shadowRoot.querySelector('[data-role="pose"]');
@@ -332,8 +348,8 @@ class AnthbotMapCard extends HTMLElement {
       const y = Number(attributes.pose?.y);
       poseBadge.textContent =
         Number.isFinite(x) && Number.isFinite(y)
-          ? `Pozicio: ${Math.round(x)}, ${Math.round(y)}`
-          : "Pozicio: -";
+          ? `${this.t("position")}: ${Math.round(x)}, ${Math.round(y)}`
+          : `${this.t("position")}: -`;
     }
 
     const headingBadge = this.shadowRoot.querySelector('[data-role="heading"]');
@@ -355,8 +371,8 @@ class AnthbotMapCard extends HTMLElement {
           ? milliRadiansToDegrees(yawValue)
           : null;
       headingBadge.textContent = Number.isFinite(heading)
-        ? `Irány: ${Math.round(normalizeSignedDegrees(heading))}°`
-        : "Irány: -";
+        ? `${this.t("heading")}: ${Math.round(normalizeSignedDegrees(heading))}°`
+        : `${this.t("heading")}: -`;
     }
   }
 
@@ -413,16 +429,16 @@ class AnthbotMapCard extends HTMLElement {
     body.innerHTML = "";
     const grid = this.createPanelGrid();
     grid.append(
-      this.createCommandTile("Inditas", "Teljes terulet nyirasa", "start"),
-      this.createCommandTile("Stop", "Minden feladat leallitasa", "stop"),
-      this.createCommandTile("Tolto", "Vissza a toltore", "dock"),
+      this.createCommandTile(this.t("startLabel"), this.t("startSub"), "start"),
+      this.createCommandTile(this.t("stopLabel"), this.t("stopSub"), "stop"),
+      this.createCommandTile(this.t("homeLabel"), this.t("homeSub"), "dock"),
     );
 
     for (const zone of this.currentZones()) {
       const tile = document.createElement("button");
       tile.type = "button";
       tile.className = "panel-tile zone-tile";
-      tile.innerHTML = `<strong>${zone.name || `Zone ${zone.id}`}</strong><span>Zonavagas inditasa</span>`;
+      tile.innerHTML = `<strong>${zone.name || `Zone ${zone.id}`}</strong><span>${this.t("zoneStart")}</span>`;
       tile.addEventListener("click", () => this.startZone(zone));
       grid.appendChild(tile);
     }
@@ -434,15 +450,16 @@ class AnthbotMapCard extends HTMLElement {
     body.innerHTML = "";
     const grid = this.createPanelGrid();
     grid.append(
-      this.createCommandTile("Cloud csatlakozas", "Adatok es parancsok frissitese", "connect"),
+      this.createLanguageControl(),
+      this.createCommandTile(this.t("cloud"), this.t("cloudSub"), "connect"),
       this.createMowHeightControl(),
-      this.createNumberControl("Egyedi irany", "mowDirection", 0, 180, 1, "deg"),
-      this.createNumberControl("Eso utani varakozas", "rainContinue", 0, 8, 1, "h"),
-      this.createNumberControl("Hangero", "voiceVolume", 0, 100, 1, "%"),
-      this.createSwitchControl("Esoerzekeles", "rain"),
-      this.createSwitchControl("Egyedi vagasi irany", "customDirection"),
-      this.createMapOverlaySwitch("Zonak megjelenitese", "showZones"),
-      this.createMapOverlaySwitch("Hatarvonal megjelenitese", "showDecodedBoundary"),
+      this.createNumberControl(this.t("customDirection"), "mowDirection", 0, 180, 1, "deg"),
+      this.createNumberControl(this.t("rainDelay"), "rainContinue", 0, 8, 1, "h"),
+      this.createNumberControl(this.t("volume"), "voiceVolume", 0, 100, 1, "%"),
+      this.createSwitchControl(this.t("rainDetection"), "rain"),
+      this.createSwitchControl(this.t("customCutDirection"), "customDirection"),
+      this.createMapOverlaySwitch(this.t("showZones"), "showZones"),
+      this.createMapOverlaySwitch(this.t("showBoundary"), "showDecodedBoundary"),
     );
     body.appendChild(grid);
   }
@@ -451,16 +468,16 @@ class AnthbotMapCard extends HTMLElement {
     body.innerHTML = "";
     const grid = this.createPanelGrid();
     for (const item of [
-      ["Akku", "battery"],
-      ["Allapot", "status"],
-      ["Toltes", "charging"],
-      ["Kapcsolat", "connection"],
-      ["Vagasi magassag", "cuttingHeight"],
-      ["Nyirt terulet", "mowingArea"],
-      ["Nyirasi ido", "mowingTime"],
+      [this.t("battery"), "battery"],
+      [this.t("status"), "status"],
+      [this.t("charging"), "charging"],
+      [this.t("connection"), "connection"],
+      [this.t("cutHeight"), "cuttingHeight"],
+      [this.t("mowedArea"), "mowingArea"],
+      [this.t("mowingTime"), "mowingTime"],
       ["RTK", "rtkFix"],
-      ["Osszterulet", "totalArea"],
-      ["Hiba", "errorDescription"],
+      [this.t("totalArea"), "totalArea"],
+      [this.t("error"), "errorDescription"],
     ]) {
       grid.appendChild(this.createInfoTile(item[0], item[1]));
     }
@@ -471,15 +488,15 @@ class AnthbotMapCard extends HTMLElement {
     body.innerHTML = "";
     const grid = this.createPanelGrid();
     for (const item of [
-      ["Vagokes elet", "cuttingComponentsLife"],
-      ["Damilszal elet", "cuttingLineLife"],
-      ["Tolto kontakt", "rechargeContactLife"],
+      [this.t("bladeLife"), "cuttingComponentsLife"],
+      [this.t("lineLife"), "cuttingLineLife"],
+      [this.t("dockContact"), "rechargeContactLife"],
       ["WiFi", "wifi"],
       ["Bluetooth", "bluetooth"],
       ["Firmware", "firmware"],
       ["GPS lat", "gpsLatitude"],
       ["GPS lon", "gpsLongitude"],
-      ["Utolso frissites", "shadowUpdated"],
+      [this.t("lastUpdate"), "shadowUpdated"],
     ]) {
       grid.appendChild(this.createInfoTile(item[0], item[1]));
     }
@@ -509,6 +526,30 @@ class AnthbotMapCard extends HTMLElement {
     return tile;
   }
 
+  createLanguageControl() {
+    const tile = document.createElement("label");
+    tile.className = "panel-tile language-tile";
+    const title = document.createElement("span");
+    title.textContent = this.t("language");
+    const select = document.createElement("select");
+    select.setAttribute("aria-label", this.t("language"));
+    for (const [code, name] of LANGUAGES) {
+      const option = document.createElement("option");
+      option.value = code;
+      option.textContent = code === "auto" ? `${this.t("automatic")} (${name.split(" / ")[0]})` : name;
+      option.selected = code === this.selectedLanguage;
+      select.appendChild(option);
+    }
+    select.addEventListener("change", () => {
+      this.selectedLanguage = select.value;
+      this.config = { ...this.config, language: select.value };
+      window.localStorage.setItem("anthbot-map-language", select.value);
+      this.render();
+    });
+    tile.append(title, select);
+    return tile;
+  }
+
   createMowHeightControl() {
     const key = "mowHeight";
     const entityId = this.getNumberEntity(key);
@@ -519,10 +560,10 @@ class AnthbotMapCard extends HTMLElement {
     tile.className = "panel-tile control-tile mow-height-tile";
     tile.innerHTML = `
       <div class="control-head">
-        <span>Vagasi magassag</span>
+        <span>${this.t("cutHeight")}</span>
         <strong>${selected} mm</strong>
       </div>
-      <div class="height-options" role="group" aria-label="Vagasi magassag"></div>
+      <div class="height-options" role="group" aria-label="${this.t("cutHeight")}"></div>
     `;
     const options = tile.querySelector(".height-options");
     for (let height = 30; height <= 70; height += 5) {
@@ -620,7 +661,8 @@ class AnthbotMapCard extends HTMLElement {
       calibration: this.calibration,
       robotCalibration: this.robotCalibration,
       decodedBoundaryCalibration: this.decodedBoundaryCalibration,
-      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=77"),
+      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=78"),
+      noGoLabel: this.t("forbidden"),
       robotSize: this.config.robot_size ?? this.config.robotSize,
       robotImageRotation: this.config.robot_image_rotation ?? this.config.robotImageRotation,
       robotHeadingSource: this.config.robot_heading_source || this.config.robotHeadingSource,
@@ -938,6 +980,7 @@ class AnthbotMapCard extends HTMLElement {
   configForYaml() {
     return {
       ...this.config,
+      language: this.selectedLanguage,
       show_decoded_boundary: this.showDecodedBoundary,
       show_zones: this.showZones,
     };
@@ -1090,20 +1133,9 @@ class AnthbotMapCard extends HTMLElement {
   }
 
   translateStatus(status) {
-    const labels = {
-      on: "be",
-      off: "ki",
-      standby: "keszenlet",
-      paused: "szunet",
-      charging: "toltes",
-      mowing: "nyiras",
-      returning_to_dock: "vissza a toltore",
-      mapping: "terkepezes",
-      positioning: "pozicionalas",
-      sleeping: "alvas",
-      unknown: "ismeretlen",
-    };
-    return labels[status] || status;
+    const key = `status_${status}`;
+    const value = this.t(key);
+    return value === key ? status : value;
   }
 
   resolveAsset(fileName) {
