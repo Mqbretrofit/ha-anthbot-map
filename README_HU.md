@@ -27,7 +27,8 @@ a töltőt és a megtett útvonalat a kert saját felülnézeti fényképén jel
 - a hivatalos alkalmazással megegyező milliradiános irányszámítás
 - a kalibrálópanelen elkészített YAML közvetlenül kimásolható
 - a Home Assistant nyelvének automatikus felismerése és kézi nyelvválasztás
-- 18 választható nyelv, köztük az egyszerűsített és hagyományos kínai
+- 23 választható nyelv, köztük az egyszerűsített és hagyományos kínai,
+  a török, thai, vietnámi, koreai és khmer
 
 Elsősorban Genie sorozatú fűnyírókkal tesztelve. Az elérhető adatok és
 parancsok modellenként és firmware-verziónként eltérhetnek.
@@ -79,7 +80,7 @@ A fő fájl végleges helye:
 Add hozzá ezt a Lovelace JavaScript-erőforrást:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=79
+/local/anthbot-map/anthbot-map-card.js?v=80
 ```
 
 Az erőforrás típusa: **JavaScript module**. Az erőforráskezelő általában a
@@ -209,7 +210,7 @@ Home Assistantot és nyomj `Ctrl+Shift+R`-t.
 
 - ellenőrizd, hogy az erőforrás típusa JavaScript module
 - ellenőrizd a `/config/www/anthbot-map/anthbot-map-card.js` fájlt
-- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=79` címet
+- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=80` címet
 - frissítsd az oldalt `Ctrl+Shift+R` használatával
 
 ### Nem látható a térkép vagy a robot
