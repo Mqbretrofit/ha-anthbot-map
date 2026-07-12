@@ -79,7 +79,7 @@ A fő fájl végleges helye:
 Add hozzá ezt a Lovelace JavaScript-erőforrást:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=78
+/local/anthbot-map/anthbot-map-card.js?v=79
 ```
 
 Az erőforrás típusa: **JavaScript module**. Az erőforráskezelő általában a
@@ -209,7 +209,7 @@ Home Assistantot és nyomj `Ctrl+Shift+R`-t.
 
 - ellenőrizd, hogy az erőforrás típusa JavaScript module
 - ellenőrizd a `/config/www/anthbot-map/anthbot-map-card.js` fájlt
-- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=78` címet
+- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=79` címet
 - frissítsd az oldalt `Ctrl+Shift+R` használatával
 
 ### Nem látható a térkép vagy a robot
@@ -221,7 +221,7 @@ Home Assistantot és nyomj `Ctrl+Shift+R`-t.
 
 ### Az irány csak körülbelül −40° és +40° között változik
 
-A böngésző valószínűleg régebbi kártyaverziót használ. A 78-as verzió már
+A böngésző valószínűleg régebbi kártyaverziót használ. A 79-es verzió már
 helyesen váltja át a milliradiánt. Frissítsd az erőforrás címét, majd nyomj
 `Ctrl+Shift+R`-t.
 
