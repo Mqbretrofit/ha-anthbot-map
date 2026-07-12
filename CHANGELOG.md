@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.7 / map card v79 — 2026-07-12
+
+### Fixed
+
+- Keep the language selector and other settings controls open while live mower
+  data refreshes in the background.
+
 ## 1.0.6 / map card v78 — 2026-07-12
 
 ### Added
