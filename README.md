@@ -33,7 +33,8 @@ robot on a top-down photograph of the garden.
 - robot heading calculated like the official app from milliradian `pose.yaw`
 - generated YAML can be copied from the card calibration panel
 - automatic Home Assistant language detection and manual language selection
-- 18 selectable languages, including simplified and traditional Chinese
+- 23 selectable languages, including simplified and traditional Chinese,
+  Turkish, Thai, Vietnamese, Korean, and Khmer
 
 Tested primarily with Genie-series mowers. Cloud fields and available commands
 can vary by mower model and firmware.
@@ -90,7 +91,7 @@ The resulting main file must be:
 Add the Lovelace JavaScript resource:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=79
+/local/anthbot-map/anthbot-map-card.js?v=80
 ```
 
 Resource type: **JavaScript module**.
@@ -229,7 +230,7 @@ After updating the card files, increment the query string in the Lovelace
 resource URL to avoid browser caching, for example:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=79
+/local/anthbot-map/anthbot-map-card.js?v=80
 ```
 
 Then restart Home Assistant and hard-refresh the browser.
@@ -240,7 +241,7 @@ Then restart Home Assistant and hard-refresh the browser.
 
 - confirm the resource is a JavaScript module
 - confirm `/config/www/anthbot-map/anthbot-map-card.js` exists
-- open `/local/anthbot-map/anthbot-map-card.js?v=79` directly in the browser
+- open `/local/anthbot-map/anthbot-map-card.js?v=80` directly in the browser
 - hard-refresh with `Ctrl+Shift+R`
 
 ### Map or robot is missing
