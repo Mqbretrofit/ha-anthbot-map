@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.9 / map card v81 — 2026-07-13
+
+- Az „Utolsó frissítés” időpontja a Home Assistant beállított helyi időzónájában jelenik meg.
+- Ha nincs HA-időzóna, a böngésző helyi időzónája az alapértelmezés.
+- A dátum és idő formátuma követi a kártyán kiválasztott nyelvet.
+
 ## 1.0.8 / map card v80 — 2026-07-12
 
 ### Added
