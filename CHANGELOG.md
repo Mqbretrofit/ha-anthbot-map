@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.19 / map card v91 — 2026-07-14
+
+### Changed
+
+- A kártya háttere, szövegei, panelei, elválasztói, kiemelőszíne, lekerekítése és árnyéka követi az aktív Home Assistant témát.
+- A Start, Stop és Töltő műveleti gombok saját állapotszínei megmaradnak.
+
 ## 1.0.18 / map card v90 — 2026-07-14
 
 ### Fixed
