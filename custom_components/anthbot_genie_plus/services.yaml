@@ -12,6 +12,20 @@ start_full_mow:
       selector:
         text:
 
+start_outer_edge_mow:
+  name: Start Outer Edge Mow
+  description: Mow only the outer lawn boundary.
+  target:
+    entity:
+      integration: anthbot_genie_plus
+
+start_dock_edge_mow:
+  name: Mow Around Charging Dock
+  description: Run the factory nest mowing task around the charging station.
+  target:
+    entity:
+      integration: anthbot_genie_plus
+
 connect_cloud:
   name: Connect Cloud
   description: Wake the mower cloud connection and request all current properties.
