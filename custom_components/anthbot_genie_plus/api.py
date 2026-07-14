@@ -31,6 +31,7 @@ from .const import (
 
 # Refresh STS creds this many seconds before declared expiration.
 _CREDENTIALS_REFRESH_BUFFER_SECONDS = 60
+_CREDENTIALS_FALLBACK_TTL_SECONDS = 45 * 60
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -550,6 +551,8 @@ class AnthbotCloudApiClient:
         self._session = session
         self._host = host
         self._bearer_token = bearer_token
+        self._login_credentials: tuple[str, str, str] | None = None
+        self._login_lock = asyncio.Lock()
         self._auth_headers = {
             "Accept": "application/json, text/plain, */*",
             "version": "v2",
@@ -563,6 +566,7 @@ class AnthbotCloudApiClient:
         self, *, username: str, password: str, area_code: str
     ) -> str:
         """Login and return bearer token."""
+        self._login_credentials = (username, password, area_code)
         url = f"https://{self._host}/api/v1/login"
         headers = {
             "Accept": "application/json, text/plain, */*",
@@ -607,6 +611,18 @@ class AnthbotCloudApiClient:
         self._bearer_token = bearer_token
         self._auth_headers["Authorization"] = bearer_token
         return bearer_token
+
+    async def async_reauthenticate(self) -> str:
+        """Refresh the account bearer token using the configured credentials."""
+        if self._login_credentials is None:
+            raise AnthbotGenieApiError("Account credentials are not available for re-login")
+        async with self._login_lock:
+            username, password, area_code = self._login_credentials
+            return await self.async_login(
+                username=username,
+                password=password,
+                area_code=area_code,
+            )
 
     def _require_token(self) -> None:
         if not self._bearer_token:
@@ -788,9 +804,7 @@ class AnthbotCloudApiClient:
         ):
             raise AnthbotGenieApiError("IoT STS payload missing required fields")
 
-        expiration = data.get("expiration")
-        if not isinstance(expiration, int):
-            expiration = None
+        expiration = self._parse_expiration(data.get("expiration"))
 
         return AnthbotTemporaryIotCredentials(
             access_key_id=access_key_id,
@@ -800,6 +814,30 @@ class AnthbotCloudApiClient:
             endpoint=endpoint,
             expiration=expiration,
         )
+
+    @staticmethod
+    def _parse_expiration(value: Any) -> int | None:
+        """Normalize STS expiration expressed as seconds, milliseconds or ISO text."""
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, (int, float)):
+            timestamp = int(value)
+            return timestamp // 1000 if timestamp > 10_000_000_000 else timestamp
+        if isinstance(value, str):
+            raw = value.strip()
+            if not raw:
+                return None
+            if raw.isdigit():
+                timestamp = int(raw)
+                return timestamp // 1000 if timestamp > 10_000_000_000 else timestamp
+            try:
+                parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                return int(parsed.timestamp())
+            except ValueError:
+                return None
+        return None
 
     async def async_get_device_json_file(
         self,
@@ -994,6 +1032,7 @@ class AnthbotShadowApiClient:
         # credentials are embedded in this integration.
         self._account_client = account_client
         self._credentials: AnthbotTemporaryIotCredentials | None = None
+        self._credentials_acquired_at: float | None = None
         self._credentials_lock = asyncio.Lock()
         endpoint_region = self._guess_region_from_endpoint(self._iot_endpoint)
         if (
@@ -1015,7 +1054,11 @@ class AnthbotShadowApiClient:
         if creds is None:
             return False
         if creds.expiration is None:
-            return True
+            return (
+                self._credentials_acquired_at is not None
+                and time.time() - self._credentials_acquired_at
+                < _CREDENTIALS_FALLBACK_TTL_SECONDS
+            )
         # expiration is unix seconds; allow refresh buffer
         return creds.expiration - int(time.time()) > _CREDENTIALS_REFRESH_BUFFER_SECONDS
 
@@ -1040,16 +1083,28 @@ class AnthbotShadowApiClient:
                     self._serial_number
                 )
             except AnthbotGenieApiError as err:
-                _LOGGER.debug(
-                    "Failed to fetch IoT STS credentials for %s: %s",
+                _LOGGER.warning(
+                    "Failed to refresh IoT credentials for %s; re-authenticating the Anthbot account: %s",
                     self._serial_number,
                     err,
                 )
-                # If we had stale creds, return them as a last-ditch attempt.
-                if self._credentials is not None:
-                    return self._credentials
-                raise
+                try:
+                    await self._account_client.async_reauthenticate()
+                    creds = await self._account_client.async_get_device_iot_credentials(
+                        self._serial_number
+                    )
+                except AnthbotGenieApiError as retry_err:
+                    _LOGGER.warning(
+                        "Anthbot account re-authentication or IoT credential retry failed for %s: %s",
+                        self._serial_number,
+                        retry_err,
+                    )
+                    # If we had stale creds, return them as a last-ditch attempt.
+                    if self._credentials is not None:
+                        return self._credentials
+                    raise
             self._credentials = creds
+            self._credentials_acquired_at = time.time()
             # Reuse the endpoint/region the cloud sent us if available — they
             # match the policy attached to the temp creds.
             if creds.endpoint:
