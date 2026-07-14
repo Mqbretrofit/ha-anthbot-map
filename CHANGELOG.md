@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.18 / map card v90 — 2026-07-14
+
+### Fixed
+
+- Három egymást követő átmeneti cloud hiba alatt megmarad az utolsó érvényes állapot.
+- Az indítási parancsok között késleltetés van, így nem írják felül egymást az AWS shadow-ban.
+- Az integráció ellenőrzi a tényleges nyírási állapotot, és sikertelen indulásnál egyszer újrapróbálja.
+
 ## 1.0.17 / map card v89 — 2026-07-14
 
 ### Changed
