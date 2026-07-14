@@ -1,5 +1,5 @@
-﻿import { AnthbotMapRenderer } from "./renderer.js?v=88";
-import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=88";
+﻿import { AnthbotMapRenderer } from "./renderer.js?v=89";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=89";
 import {
   adjustCalibration,
   cardToYaml,
@@ -7,7 +7,7 @@ import {
   readDecodedBoundaryCalibration,
   readRobotCalibration,
   resetCalibration,
-} from "./calibration.js?v=88";
+} from "./calibration.js?v=89";
 
 const ENTITY_MAP = {
   battery: ["sensor", ["battery_level"]],
@@ -60,6 +60,8 @@ class AnthbotMapCard extends HTMLElement {
     this.mapExpanded = false;
     this.showDecodedBoundary = true;
     this.showZones = true;
+    this.mapOnly = false;
+    this.transparentBackground = false;
     this.optimisticSettings = new Map();
     this.selectedLanguage = "auto";
   }
@@ -70,6 +72,15 @@ class AnthbotMapCard extends HTMLElement {
     }
 
     this.config = config;
+    const savedInterface = this.readInterfaceSettings(config.entity);
+    this.mapOnly = typeof config.map_only === "boolean"
+      ? config.map_only
+      : typeof config.mapOnly === "boolean" ? config.mapOnly : Boolean(savedInterface.mapOnly);
+    this.transparentBackground = typeof config.transparent_background === "boolean"
+      ? config.transparent_background
+      : typeof config.transparentBackground === "boolean"
+        ? config.transparentBackground
+        : Boolean(savedInterface.transparentBackground);
     this.selectedLanguage = config.language || window.localStorage.getItem("anthbot-map-language") || "auto";
     this.stopRefreshTimer();
     window.clearTimeout(this.pendingRefreshTimer);
@@ -115,15 +126,14 @@ class AnthbotMapCard extends HTMLElement {
 
   render() {
     const root = this.shadowRoot;
-    const mapOnly = this.config.map_only === true || this.config.mapOnly === true;
-    const transparentBackground =
-      this.config.transparent_background === true || this.config.transparentBackground === true;
+    const mapOnly = this.mapOnly;
+    const transparentBackground = this.transparentBackground;
     const cardClasses = [mapOnly ? "map-only" : "", transparentBackground ? "transparent-background" : ""]
       .filter(Boolean)
       .join(" ");
     root.innerHTML = `
       <ha-card class="${cardClasses}">
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=88")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=89")}">
         <section class="app-shell">
           <div class="top-menu">
             <div>
@@ -142,7 +152,8 @@ class AnthbotMapCard extends HTMLElement {
           </div>
           <div class="panel-tabs">
             <button type="button" data-panel="control">${this.t("control")}</button>
-            <button type="button" data-panel="settings">${this.t("settings")}</button>
+            <button type="button" data-panel="settings">${this.t("robotSettings")}</button>
+            <button type="button" data-panel="interface">${this.t("interfaceSettings")}</button>
             <button type="button" data-panel="status">${this.t("status")}</button>
             <button type="button" data-panel="diagnostics">${this.t("diagnostics")}</button>
           </div>
@@ -266,6 +277,9 @@ class AnthbotMapCard extends HTMLElement {
       if (!mapOnly && !this.mapExpanded && !event.target.closest("button")) {
         this.setMapExpanded(true);
       }
+    });
+    canvasWrap?.addEventListener("dblclick", () => {
+      if (this.mapOnly) this.setInterfaceOption("mapOnly", false);
     });
 
     this.renderer?.destroy();
@@ -458,6 +472,8 @@ class AnthbotMapCard extends HTMLElement {
 
     if (this.activePanel === "settings") {
       this.renderSettingsPanel(body);
+    } else if (this.activePanel === "interface") {
+      this.renderInterfacePanel(body);
     } else if (this.activePanel === "status") {
       this.renderStatusPanel(body);
     } else if (this.activePanel === "diagnostics") {
@@ -494,7 +510,6 @@ class AnthbotMapCard extends HTMLElement {
     body.innerHTML = "";
     const grid = this.createPanelGrid();
     grid.append(
-      this.createLanguageControl(),
       this.createCommandTile(this.t("cloud"), this.t("cloudSub"), "connect"),
       this.createMowHeightControl(),
       this.createNumberControl(this.t("customDirection"), "mowDirection", 0, 180, 1, "deg"),
@@ -502,6 +517,17 @@ class AnthbotMapCard extends HTMLElement {
       this.createNumberControl(this.t("volume"), "voiceVolume", 0, 100, 1, "%"),
       this.createSwitchControl(this.t("rainDetection"), "rain"),
       this.createSwitchControl(this.t("customCutDirection"), "customDirection"),
+    );
+    body.appendChild(grid);
+  }
+
+  renderInterfacePanel(body) {
+    body.innerHTML = "";
+    const grid = this.createPanelGrid();
+    grid.append(
+      this.createLanguageControl(),
+      this.createInterfaceSwitch(this.t("mapOnly"), "mapOnly"),
+      this.createInterfaceSwitch(this.t("transparentBackground"), "transparentBackground"),
       this.createMapOverlaySwitch(this.t("showZones"), "showZones"),
       this.createMapOverlaySwitch(this.t("showBoundary"), "showDecodedBoundary"),
     );
@@ -675,6 +701,19 @@ class AnthbotMapCard extends HTMLElement {
     return tile;
   }
 
+  createInterfaceSwitch(label, key) {
+    const tile = document.createElement("label");
+    tile.className = "panel-tile switch-tile";
+    tile.innerHTML = `
+      <span>${label}</span>
+      <input type="checkbox" ${this[key] ? "checked" : ""}>
+    `;
+    tile.querySelector("input").addEventListener("change", (event) => {
+      this.setInterfaceOption(key, event.target.checked);
+    });
+    return tile;
+  }
+
   renderZoneControls(areaDefinition = {}) {
     const container = this.shadowRoot.querySelector('[data-role="zone-controls"]');
     if (!container) {
@@ -705,7 +744,7 @@ class AnthbotMapCard extends HTMLElement {
       calibration: this.calibration,
       robotCalibration: this.robotCalibration,
       decodedBoundaryCalibration: this.decodedBoundaryCalibration,
-      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=88"),
+      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=89"),
       noGoLabel: this.t("forbidden"),
       robotSize: this.config.robot_size ?? this.config.robotSize,
       robotImageRotation: this.config.robot_image_rotation ?? this.config.robotImageRotation,
@@ -720,8 +759,7 @@ class AnthbotMapCard extends HTMLElement {
       showLegacyBoundary: this.config.show_legacy_boundary === true || this.config.showLegacyBoundary === true,
       showDecodedBoundary: this.showDecodedBoundary,
       showZones: this.showZones,
-      transparentBackground:
-        this.config.transparent_background === true || this.config.transparentBackground === true,
+      transparentBackground: this.transparentBackground,
       boundaryColor: this.config.boundary_color || this.config.boundaryColor,
       boundaryWidth: this.config.boundary_width ?? this.config.boundaryWidth,
       charger: this.config.charger,
@@ -999,6 +1037,35 @@ class AnthbotMapCard extends HTMLElement {
     this.updateYaml();
   }
 
+  interfaceStorageKey(entity = this.config.entity) {
+    return `anthbot-map-interface:${entity || "default"}`;
+  }
+
+  readInterfaceSettings(entity) {
+    try {
+      return JSON.parse(window.localStorage.getItem(this.interfaceStorageKey(entity)) || "{}") || {};
+    } catch (_error) {
+      return {};
+    }
+  }
+
+  saveInterfaceSettings() {
+    window.localStorage.setItem(this.interfaceStorageKey(), JSON.stringify({
+      mapOnly: this.mapOnly,
+      transparentBackground: this.transparentBackground,
+    }));
+  }
+
+  setInterfaceOption(key, enabled) {
+    this[key] = Boolean(enabled);
+    if (key === "mapOnly") this.config = { ...this.config, map_only: this.mapOnly };
+    if (key === "transparentBackground") {
+      this.config = { ...this.config, transparent_background: this.transparentBackground };
+    }
+    this.saveInterfaceSettings();
+    this.render();
+  }
+
   setMapExpanded(expanded) {
     this.mapExpanded = Boolean(expanded);
     this.shadowRoot?.querySelector("ha-card")?.classList.toggle("map-expanded", this.mapExpanded);
@@ -1055,6 +1122,8 @@ class AnthbotMapCard extends HTMLElement {
   configForYaml() {
     return {
       ...this.config,
+      map_only: this.mapOnly,
+      transparent_background: this.transparentBackground,
       language: this.selectedLanguage,
       show_decoded_boundary: this.showDecodedBoundary,
       show_zones: this.showZones,
