@@ -1,5 +1,5 @@
-﻿import { AnthbotMapRenderer } from "./renderer.js?v=86";
-import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=86";
+﻿import { AnthbotMapRenderer } from "./renderer.js?v=87";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=87";
 import {
   adjustCalibration,
   cardToYaml,
@@ -7,7 +7,7 @@ import {
   readDecodedBoundaryCalibration,
   readRobotCalibration,
   resetCalibration,
-} from "./calibration.js?v=86";
+} from "./calibration.js?v=87";
 
 const ENTITY_MAP = {
   battery: ["sensor", ["battery_level"]],
@@ -115,9 +115,10 @@ class AnthbotMapCard extends HTMLElement {
 
   render() {
     const root = this.shadowRoot;
+    const mapOnly = this.config.map_only === true || this.config.mapOnly === true;
     root.innerHTML = `
-      <ha-card>
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=86")}">
+      <ha-card class="${mapOnly ? "map-only" : ""}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=87")}">
         <section class="app-shell">
           <div class="top-menu">
             <div>
@@ -257,7 +258,7 @@ class AnthbotMapCard extends HTMLElement {
     const canvasWrap = root.querySelector(".canvas-wrap");
     this.applyAutomaticMapSize(canvasWrap);
     canvasWrap?.addEventListener("click", (event) => {
-      if (!this.mapExpanded && !event.target.closest("button")) {
+      if (!mapOnly && !this.mapExpanded && !event.target.closest("button")) {
         this.setMapExpanded(true);
       }
     });
@@ -699,7 +700,7 @@ class AnthbotMapCard extends HTMLElement {
       calibration: this.calibration,
       robotCalibration: this.robotCalibration,
       decodedBoundaryCalibration: this.decodedBoundaryCalibration,
-      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=86"),
+      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=87"),
       noGoLabel: this.t("forbidden"),
       robotSize: this.config.robot_size ?? this.config.robotSize,
       robotImageRotation: this.config.robot_image_rotation ?? this.config.robotImageRotation,
@@ -766,6 +767,12 @@ class AnthbotMapCard extends HTMLElement {
   }
 
   async handleCommand(command) {
+    const customAction = this.config.button_actions?.[command] || this.config.buttonActions?.[command];
+    if (customAction) {
+      await this.callCustomButtonAction(command, customAction);
+      return;
+    }
+
     const serviceByCommand = {
       connect: "connect_cloud",
       start: "start_full_mow",
@@ -895,6 +902,27 @@ class AnthbotMapCard extends HTMLElement {
     };
     if (valueLabel) {
       valueLabel.textContent = `${value} ${units[kind] || ""}`.trim();
+    }
+  }
+
+  async callCustomButtonAction(command, action) {
+    const definition = typeof action === "string" ? { service: action } : action;
+    const serviceName = definition?.service;
+    if (typeof serviceName !== "string" || !serviceName.includes(".")) {
+      throw new Error(`Invalid custom action for ${command}`);
+    }
+
+    const separator = serviceName.indexOf(".");
+    const domain = serviceName.slice(0, separator);
+    const service = serviceName.slice(separator + 1);
+    const data = definition.data || definition.service_data || {};
+    const target = definition.target || {};
+
+    try {
+      await this._hass.callService(domain, service, data, target);
+    } catch (error) {
+      this.notify(`Az egyedi gombművelet hibát jelzett: ${serviceName}`);
+      throw error;
     }
   }
 
