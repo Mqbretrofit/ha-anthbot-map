@@ -282,6 +282,10 @@ export class AnthbotMapRenderer {
   }
 
   drawBackground(ctx, geometry, width, height) {
+    if (this.options.transparentBackground === true) {
+      return;
+    }
+
     ctx.fillStyle = COLORS.background;
     ctx.fillRect(0, 0, width, height);
 
