@@ -34,6 +34,8 @@ BUTTONS: tuple[AnthbotButtonDescription, ...] = (
         translation_key="start_full_mow",
         name="Start full mow",
     ),
+    AnthbotButtonDescription(key="start_outer_edge_mow", name="Start outer edge mow"),
+    AnthbotButtonDescription(key="start_dock_edge_mow", name="Mow around charging dock"),
     AnthbotButtonDescription(
         key="stop_mow",
         translation_key="stop_mow",
@@ -130,6 +132,11 @@ class AnthbotButtonEntity(
             await self.coordinator.client.async_publish_service_command(
                 cmd="mow_start", data=1
             )
+        elif key == "start_outer_edge_mow":
+            await self.coordinator.client.async_publish_service_command(cmd="app_state", data=2)
+            await self.coordinator.client.async_publish_service_command(cmd="mow_start", data=1)
+        elif key == "start_dock_edge_mow":
+            await self.coordinator.client.async_publish_service_command(cmd="nest_mow_start", data=1)
         elif key == "stop_mow":
             await self.coordinator.client.async_publish_service_command(
                 cmd="stop_all_tasks", data=1
