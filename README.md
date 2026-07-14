@@ -91,7 +91,7 @@ The resulting main file must be:
 Add the Lovelace JavaScript resource:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=94
+/local/anthbot-map/anthbot-map-card.js?v=95
 ```
 
 Resource type: **JavaScript module**.
@@ -269,7 +269,7 @@ After updating the card files, increment the query string in the Lovelace
 resource URL to avoid browser caching, for example:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=94
+/local/anthbot-map/anthbot-map-card.js?v=95
 ```
 
 Then restart Home Assistant and hard-refresh the browser.
@@ -280,7 +280,7 @@ Then restart Home Assistant and hard-refresh the browser.
 
 - confirm the resource is a JavaScript module
 - confirm `/config/www/anthbot-map/anthbot-map-card.js` exists
-- open `/local/anthbot-map/anthbot-map-card.js?v=94` directly in the browser
+- open `/local/anthbot-map/anthbot-map-card.js?v=95` directly in the browser
 - hard-refresh with `Ctrl+Shift+R`
 
 ### Map or robot is missing
