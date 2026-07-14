@@ -72,6 +72,7 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_area_time: str | None = None
         self._last_map_time: str | None = None
         self._last_path_time: str | None = None
+        self._consecutive_cloud_failures = 0
 
     @property
     def reported_state(self) -> dict[str, Any]:
@@ -189,6 +190,16 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             merged_state["_path_definition"] = self._path_definition
             merged_state["_map_definition_error"] = self._map_definition_error
             merged_state["_path_definition_error"] = self._path_definition_error
+            self._consecutive_cloud_failures = 0
             return merged_state
         except AnthbotGenieApiError as err:
+            self._consecutive_cloud_failures += 1
+            if self.reported_state and self._consecutive_cloud_failures <= 3:
+                _LOGGER.warning(
+                    "Temporary Anthbot cloud failure for %s (%s/3), keeping last state: %s",
+                    self.client.serial_number,
+                    self._consecutive_cloud_failures,
+                    err,
+                )
+                return self.reported_state
             raise UpdateFailed(str(err)) from err
