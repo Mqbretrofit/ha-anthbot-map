@@ -1,5 +1,54 @@
 # Changelog
 
+## 1.0.14 / map card v86 — 2026-07-14
+
+### Changed
+
+- A térkép magassága automatikusan követi a háttérkép valódi oldalarányát.
+- A kártya átméretezésekor a háttérkép és a vászon együtt méreteződik.
+- A kézi `height` beállítás továbbra is felülbírálja az automatikus méretezést.
+
+## 1.0.13 / map card v85 — 2026-07-13
+
+### Removed
+
+- A nem támogatott no-go szegélynyírás és a hozzá tartozó pontgenerálás.
+- A „Minden szegély” művelet, mert az a hibás no-go feladatot is elindította.
+
+### Unchanged
+
+- A gyári külső szegélynyírás és a töltőállomás körüli nyírás továbbra is elérhető.
+
+## 1.0.12 / map card v84 — 2026-07-13
+
+### Fixed
+
+- A generált no-go pontokat nem egy nagy, firmware által elutasítható listában küldi.
+- Minden pont külön `region_mow_start` feladatként indul.
+- A következő pont csak az előző pontnyírás befejezése után kerül elküldésre.
+
+## 1.0.11 / map card v83 — 2026-07-13
+
+### Fixed
+
+- A `nest_mow_start` helyesen töltő körüli nyírásként jelenik meg.
+- A no-go szegélynyírás már nem indít töltő körüli feladatot.
+
+### Added
+
+- A felhőből lekért tényleges no-go határpontok követése.
+- Az eredeti alakzattal párhuzamos, alapértelmezetten 30 cm-rel kifelé eltolt útvonal.
+- Állítható biztonsági távolság és pontsűrűség a Home Assistant szolgáltatásban.
+
+## 1.0.10 / map card v82 — 2026-07-13
+
+### Added
+
+- Külső szegélyvágás külön Home Assistant szolgáltatással és kártyagombbal.
+- No-go zónák körbevágása a gyári `nest_mow_start` paranccsal.
+- Minden szegély vágása egyetlen kártyagombbal.
+- Külön Home Assistant gombentitások mindhárom szegélyvágási módhoz.
+
 ## 1.0.9 / map card v81 — 2026-07-13
 
 - Az „Utolsó frissítés” időpontja a Home Assistant beállított helyi időzónájában jelenik meg.
