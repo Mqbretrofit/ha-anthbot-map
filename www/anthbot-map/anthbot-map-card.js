@@ -1,5 +1,5 @@
-﻿import { AnthbotMapRenderer } from "./renderer.js?v=91";
-import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=91";
+﻿import { AnthbotMapRenderer } from "./renderer.js?v=94";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=94";
 import {
   adjustCalibration,
   cardToYaml,
@@ -7,7 +7,7 @@ import {
   readDecodedBoundaryCalibration,
   readRobotCalibration,
   resetCalibration,
-} from "./calibration.js?v=91";
+} from "./calibration.js?v=94";
 
 const ENTITY_MAP = {
   battery: ["sensor", ["battery_level"]],
@@ -62,6 +62,7 @@ class AnthbotMapCard extends HTMLElement {
     this.showZones = true;
     this.mapOnly = false;
     this.transparentBackground = false;
+    this.glassBackground = false;
     this.optimisticSettings = new Map();
     this.selectedLanguage = "auto";
   }
@@ -81,6 +82,11 @@ class AnthbotMapCard extends HTMLElement {
       : typeof config.transparentBackground === "boolean"
         ? config.transparentBackground
         : Boolean(savedInterface.transparentBackground);
+    this.glassBackground = typeof config.glass_background === "boolean"
+      ? config.glass_background
+      : typeof config.glassBackground === "boolean"
+        ? config.glassBackground
+        : Boolean(savedInterface.glassBackground);
     this.selectedLanguage = config.language || window.localStorage.getItem("anthbot-map-language") || "auto";
     this.stopRefreshTimer();
     window.clearTimeout(this.pendingRefreshTimer);
@@ -128,12 +134,17 @@ class AnthbotMapCard extends HTMLElement {
     const root = this.shadowRoot;
     const mapOnly = this.mapOnly;
     const transparentBackground = this.transparentBackground;
-    const cardClasses = [mapOnly ? "map-only" : "", transparentBackground ? "transparent-background" : ""]
+    const glassBackground = this.glassBackground;
+    const cardClasses = [
+      mapOnly ? "map-only" : "",
+      glassBackground ? "glass-background" : "",
+      transparentBackground ? "transparent-background" : "",
+    ]
       .filter(Boolean)
       .join(" ");
     root.innerHTML = `
       <ha-card class="${cardClasses}">
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=91")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=94")}">
         <section class="app-shell">
           <div class="top-menu">
             <div>
@@ -527,6 +538,7 @@ class AnthbotMapCard extends HTMLElement {
     grid.append(
       this.createLanguageControl(),
       this.createInterfaceSwitch(this.t("mapOnly"), "mapOnly"),
+      this.createInterfaceSwitch(this.t("glassBackground"), "glassBackground"),
       this.createInterfaceSwitch(this.t("transparentBackground"), "transparentBackground"),
       this.createMapOverlaySwitch(this.t("showZones"), "showZones"),
       this.createMapOverlaySwitch(this.t("showBoundary"), "showDecodedBoundary"),
@@ -744,7 +756,7 @@ class AnthbotMapCard extends HTMLElement {
       calibration: this.calibration,
       robotCalibration: this.robotCalibration,
       decodedBoundaryCalibration: this.decodedBoundaryCalibration,
-      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=91"),
+      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=94"),
       noGoLabel: this.t("forbidden"),
       robotSize: this.config.robot_size ?? this.config.robotSize,
       robotImageRotation: this.config.robot_image_rotation ?? this.config.robotImageRotation,
@@ -1052,15 +1064,21 @@ class AnthbotMapCard extends HTMLElement {
   saveInterfaceSettings() {
     window.localStorage.setItem(this.interfaceStorageKey(), JSON.stringify({
       mapOnly: this.mapOnly,
+      glassBackground: this.glassBackground,
       transparentBackground: this.transparentBackground,
     }));
   }
 
   setInterfaceOption(key, enabled) {
     this[key] = Boolean(enabled);
+    if (enabled && key === "glassBackground") this.transparentBackground = false;
+    if (enabled && key === "transparentBackground") this.glassBackground = false;
     if (key === "mapOnly") this.config = { ...this.config, map_only: this.mapOnly };
+    if (key === "glassBackground") {
+      this.config = { ...this.config, glass_background: this.glassBackground, transparent_background: false };
+    }
     if (key === "transparentBackground") {
-      this.config = { ...this.config, transparent_background: this.transparentBackground };
+      this.config = { ...this.config, transparent_background: this.transparentBackground, glass_background: false };
     }
     this.saveInterfaceSettings();
     this.render();
@@ -1123,6 +1141,7 @@ class AnthbotMapCard extends HTMLElement {
     return {
       ...this.config,
       map_only: this.mapOnly,
+      glass_background: this.glassBackground,
       transparent_background: this.transparentBackground,
       language: this.selectedLanguage,
       show_decoded_boundary: this.showDecodedBoundary,
