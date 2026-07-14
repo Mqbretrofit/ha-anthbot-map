@@ -119,6 +119,8 @@ DEFAULT_SCAN_INTERVAL_DELTA = timedelta(seconds=DEFAULT_SCAN_INTERVAL)
 
 # Service names and attributes.
 SERVICE_START_FULL_MOW = "start_full_mow"
+SERVICE_START_OUTER_EDGE_MOW = "start_outer_edge_mow"
+SERVICE_START_DOCK_EDGE_MOW = "start_dock_edge_mow"
 SERVICE_CONNECT_CLOUD = "connect_cloud"
 SERVICE_STOP_MOW = "stop_mow"
 SERVICE_SET_MOW_HEIGHT = "set_mow_height"
