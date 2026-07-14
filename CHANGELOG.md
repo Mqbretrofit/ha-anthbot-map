@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.26 / map card v98 — 2026-07-14
+
+### Fixed
+
+- Lejárt Anthbot bearer tokennél az integráció automatikusan újra bejelentkezik.
+- Sikertelen AWS IoT STS-frissítés után új hitelesítéssel ismét lekéri az ideiglenes hozzáférést.
+- Az AWS lejárati idő másodperc, ezredmásodperc, számszöveg és ISO dátum formátumban is helyesen értelmezhető.
+- Hiányzó lejárati időnél az AWS-adatok legfeljebb 45 percig maradnak gyorsítótárazva.
+
 ## 1.0.25 / map card v97 — 2026-07-14
 
 ### Fixed
