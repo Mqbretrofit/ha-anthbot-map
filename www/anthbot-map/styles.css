@@ -47,12 +47,18 @@ ha-card {
 .canvas-wrap {
   background: #141d27;
   cursor: pointer;
-  height: min(280px, var(--anthbot-map-height, 720px));
+  height: var(--anthbot-map-height, 720px);
   min-height: 220px;
   position: relative;
 }
 
+.canvas-wrap.auto-map-size {
+  aspect-ratio: var(--anthbot-map-aspect-ratio, 16 / 9);
+  height: auto;
+}
+
 ha-card.map-expanded .canvas-wrap {
+  aspect-ratio: auto;
   cursor: grab;
   height: 92vh;
   inset: 4vh 3vw auto 3vw;
