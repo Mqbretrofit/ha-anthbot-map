@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.0.22 / map card v94 — 2026-07-14
+
+### Added
+
+- Új, külön kapcsolható `glass_background: true` üvegháttér-opció a Felület beállítások fülön.
+
+### Changed
+
+- Alapállapotban a háttér ismét normál, nem áttetsző theme-háttér.
+- Az üvegháttér és a teljesen átlátszó háttér kölcsönösen kizárja egymást.
+
+## 1.0.21 / map card v93 — 2026-07-14
+
+### Fixed
+
+- Az üveghatás közvetlenül bekerült a kártya Shadow DOM-jába, mert a külső theme `ha-card` CSS-szabályai oda nem jutnak be.
+- A kártya és a másodlagos panelek áttetsző témahátteret, elmosást és színtelítést kapnak.
+
+## 1.0.20 / map card v92 — 2026-07-14
+
+### Fixed
+
+- A kártya elsődlegesen a Home Assistant `card-background-color` témahátterét használja a fekete `ha-card-background` helyett.
+- A `transparent_background` most már az egész kártyát átlátszóvá teszi, beleértve a fejlécet, a paneleket és a kalibrációs részt is.
+
 ## 1.0.19 / map card v91 — 2026-07-14
 
 ### Changed
