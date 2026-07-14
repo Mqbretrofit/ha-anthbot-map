@@ -1,13 +1,13 @@
 ﻿:host {
-  --anthbot-card-base: var(--card-background-color, var(--ha-card-background, #111820));
+  --anthbot-card-base: #111820;
   --anthbot-card-background: var(--anthbot-card-base);
   --anthbot-primary-background: var(--primary-background-color, #111820);
-  --anthbot-secondary-base: var(--secondary-background-color, #141d27);
+  --anthbot-secondary-base: #141d27;
   --anthbot-secondary-background: var(--anthbot-secondary-base);
-  --anthbot-primary-text: var(--primary-text-color, #ffffff);
-  --anthbot-secondary-text: var(--secondary-text-color, rgba(255, 255, 255, 0.7));
-  --anthbot-divider: var(--divider-color, rgba(255, 255, 255, 0.1));
-  --anthbot-accent: var(--primary-color, #5ee083);
+  --anthbot-primary-text: #ffffff;
+  --anthbot-secondary-text: rgba(255, 255, 255, 0.7);
+  --anthbot-divider: rgba(255, 255, 255, 0.1);
+  --anthbot-accent: #5ee083;
   display: block;
 }
 
@@ -17,6 +17,17 @@ ha-card {
   box-shadow: var(--ha-card-box-shadow, 0 12px 34px rgba(0, 0, 0, 0.28));
   display: block;
   overflow: hidden;
+}
+
+ha-card.theme-background {
+  --anthbot-card-base: var(--card-background-color, var(--ha-card-background, #111820));
+  --anthbot-card-background: var(--anthbot-card-base);
+  --anthbot-secondary-base: var(--secondary-background-color, #141d27);
+  --anthbot-secondary-background: var(--anthbot-secondary-base);
+  --anthbot-primary-text: var(--primary-text-color, #ffffff);
+  --anthbot-secondary-text: var(--secondary-text-color, rgba(255, 255, 255, 0.7));
+  --anthbot-divider: var(--divider-color, rgba(255, 255, 255, 0.1));
+  --anthbot-accent: var(--primary-color, #5ee083);
 }
 
 .app-shell {
@@ -482,7 +493,7 @@ button.panel-tile {
 }
 
 .language-tile select {
-  background: var(--input-fill-color, var(--anthbot-secondary-background));
+  background: var(--anthbot-secondary-background);
   border: 1px solid var(--anthbot-divider);
   border-radius: 9px;
   color: var(--anthbot-primary-text);
@@ -490,6 +501,15 @@ button.panel-tile {
   min-height: 36px;
   padding: 6px 9px;
   width: 100%;
+}
+
+ha-card.theme-background .language-tile select {
+  background: var(--input-fill-color, var(--anthbot-secondary-background));
+}
+
+.language-tile select option {
+  background: var(--anthbot-card-base);
+  color: var(--anthbot-primary-text);
 }
 
 .info-tile strong {
