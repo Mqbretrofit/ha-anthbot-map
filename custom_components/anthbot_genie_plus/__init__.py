@@ -44,6 +44,8 @@ from .const import (
     SERVICE_SET_RAIN_PERCEPTION,
     SERVICE_SET_VOICE_VOLUME,
     SERVICE_START_FULL_MOW,
+    SERVICE_START_OUTER_EDGE_MOW,
+    SERVICE_START_DOCK_EDGE_MOW,
     SERVICE_START_ZONE_MOW,
     SERVICE_STOP_MOW,
 )
@@ -295,7 +297,6 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         },
         extra=vol.ALLOW_EXTRA,
     )
-
     async def _handle_start_full_mow(service_call) -> None:
         targets = _resolve_target_coordinators(hass, service_call.data)
         if not targets:
@@ -307,6 +308,17 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             await coordinator.client.async_publish_service_command(
                 cmd="mow_start", data=1
             )
+            await _async_sync_after_command(coordinator)
+
+    async def _handle_start_outer_edge_mow(service_call) -> None:
+        for coordinator in _resolve_target_coordinators(hass, service_call.data):
+            await coordinator.client.async_publish_service_command(cmd="app_state", data=2)
+            await coordinator.client.async_publish_service_command(cmd="mow_start", data=1)
+            await _async_sync_after_command(coordinator)
+
+    async def _handle_start_dock_edge_mow(service_call) -> None:
+        for coordinator in _resolve_target_coordinators(hass, service_call.data):
+            await coordinator.client.async_publish_service_command(cmd="nest_mow_start", data=1)
             await _async_sync_after_command(coordinator)
 
     async def _handle_connect_cloud(service_call) -> None:
@@ -457,6 +469,12 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             _handle_start_full_mow,
             schema=base_schema,
         )
+    for service_name, handler in (
+        (SERVICE_START_OUTER_EDGE_MOW, _handle_start_outer_edge_mow),
+        (SERVICE_START_DOCK_EDGE_MOW, _handle_start_dock_edge_mow),
+    ):
+        if not hass.services.has_service(DOMAIN, service_name):
+            hass.services.async_register(DOMAIN, service_name, handler, schema=base_schema)
     if not hass.services.has_service(DOMAIN, SERVICE_CONNECT_CLOUD):
         hass.services.async_register(
             DOMAIN,
@@ -688,6 +706,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not hass.data[DOMAIN]:
             for service_name in (
                 SERVICE_START_FULL_MOW,
+                SERVICE_START_OUTER_EDGE_MOW,
+                SERVICE_START_NO_GO_EDGE_MOW,
+                SERVICE_START_DOCK_EDGE_MOW,
+                SERVICE_START_ALL_EDGES_MOW,
                 SERVICE_STOP_MOW,
                 SERVICE_RETURN_TO_DOCK,
                 SERVICE_SET_MOW_HEIGHT,
