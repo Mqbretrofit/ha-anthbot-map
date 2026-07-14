@@ -50,6 +50,7 @@ from .const import (
     SERVICE_STOP_MOW,
 )
 from .coordinator import AnthbotGenieDataUpdateCoordinator
+from .commands import async_start_mowing
 from .zones import auto_zones, manual_zones
 
 PLATFORMS = [
@@ -302,18 +303,16 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         if not targets:
             raise AnthbotGenieApiError("No target Anthbot mower found")
         for coordinator in targets:
-            await coordinator.client.async_publish_service_command(
-                cmd="app_state", data=1
-            )
-            await coordinator.client.async_publish_service_command(
-                cmd="mow_start", data=1
-            )
+            await async_start_mowing(coordinator, app_state=1)
             await _async_sync_after_command(coordinator)
 
     async def _handle_start_outer_edge_mow(service_call) -> None:
         for coordinator in _resolve_target_coordinators(hass, service_call.data):
-            await coordinator.client.async_publish_service_command(cmd="app_state", data=2)
-            await coordinator.client.async_publish_service_command(cmd="mow_start", data=1)
+            await async_start_mowing(
+                coordinator,
+                app_state=2,
+                expected_modes={"bordermowing", "edgemowing", "gototarget"},
+            )
             await _async_sync_after_command(coordinator)
 
     async def _handle_start_dock_edge_mow(service_call) -> None:
