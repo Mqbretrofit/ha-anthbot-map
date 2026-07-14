@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.16 / map card v88 — 2026-07-14
+
+### Added
+
+- `transparent_background: true` opció floorplan rétegként történő megjelenítéshez.
+- Átlátszó módban a háttérkép és az alap kitöltés eltűnik, de a geometriai illesztés változatlan marad.
+
 ## 1.0.15 / map card v87 — 2026-07-14
 
 ### Added
