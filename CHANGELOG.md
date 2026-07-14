@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.17 / map card v89 — 2026-07-14
+
+### Changed
+
+- A Beállítások külön „Robot beállítások” és „Felület beállítások” fülre vált szét.
+- A `map_only` és `transparent_background` kapcsolható a felületről, és böngészőnként megmarad.
+- Csak térkép módban dupla kattintással vagy dupla koppintással visszaállítható a teljes kezelőfelület.
+
 ## 1.0.16 / map card v88 — 2026-07-14
 
 ### Added
