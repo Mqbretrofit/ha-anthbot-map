@@ -80,7 +80,7 @@ A fő fájl végleges helye:
 Add hozzá ezt a Lovelace JavaScript-erőforrást:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=87
+/local/anthbot-map/anthbot-map-card.js?v=88
 ```
 
 Az erőforrás típusa: **JavaScript module**. Az erőforráskezelő általában a
@@ -206,7 +206,12 @@ Floorplan fölötti megjelenítéshez a kártya minden kezelőeleme elrejthető:
 
 ```yaml
 map_only: true
+transparent_background: true
 ```
+
+A `transparent_background` eltávolítja a háttérképet és a vászon kitöltését,
+de a háttérkép oldalarányát és kalibrációját továbbra is felhasználja a pontos
+floorplan-illesztéshez.
 
 ### Egyedi gombműveletek
 
@@ -234,7 +239,7 @@ Home Assistantot és nyomj `Ctrl+Shift+R`-t.
 
 - ellenőrizd, hogy az erőforrás típusa JavaScript module
 - ellenőrizd a `/config/www/anthbot-map/anthbot-map-card.js` fájlt
-- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=87` címet
+- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=88` címet
 - frissítsd az oldalt `Ctrl+Shift+R` használatával
 
 ### Nem látható a térkép vagy a robot
