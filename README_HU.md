@@ -80,7 +80,7 @@ A fő fájl végleges helye:
 Add hozzá ezt a Lovelace JavaScript-erőforrást:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=91
+/local/anthbot-map/anthbot-map-card.js?v=94
 ```
 
 Az erőforrás típusa: **JavaScript module**. Az erőforráskezelő általában a
@@ -217,6 +217,14 @@ Mindkét opció kapcsolható a **Felület beállítások** fülön. A választá
 böngészőben megmarad. Csak térkép módban dupla kattintással vagy dupla
 koppintással visszahozható a teljes kezelőfelület.
 
+Az üveghatás külön kapcsolható, és nem teszi teljesen átlátszóvá a kártyát:
+
+```yaml
+glass_background: true
+```
+
+A `glass_background` és a `transparent_background` egyszerre nem aktív.
+
 ### Egyedi gombműveletek
 
 A `start`, `stop`, `dock`, `outer-edge`, `dock-edge` és `connect` gombokhoz
@@ -243,7 +251,7 @@ Home Assistantot és nyomj `Ctrl+Shift+R`-t.
 
 - ellenőrizd, hogy az erőforrás típusa JavaScript module
 - ellenőrizd a `/config/www/anthbot-map/anthbot-map-card.js` fájlt
-- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=91` címet
+- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=94` címet
 - frissítsd az oldalt `Ctrl+Shift+R` használatával
 
 ### Nem látható a térkép vagy a robot
