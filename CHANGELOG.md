@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.23 / map card v95 — 2026-07-14
+
+### Fixed
+
+- Üvegháttér mellett a nagy térkép ismét valódi teljes képernyős nézetben nyílik meg.
+- Nagy nézetben ideiglenesen kikapcsol a `backdrop-filter`, így nem korlátozza a fix pozicionálást.
+- Az üvegháttér és a belső panelek erősebben áttetszőek.
+
 ## 1.0.22 / map card v94 — 2026-07-14
 
 ### Added
