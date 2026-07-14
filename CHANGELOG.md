@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.15 / map card v87 — 2026-07-14
+
+### Added
+
+- `map_only: true` mód, amely kizárólag a térképet jeleníti meg floorplan használathoz.
+- Gombonként beállítható `button_actions`, tetszőleges Home Assistant service vagy script meghívásával.
+
 ## 1.0.14 / map card v86 — 2026-07-14
 
 ### Changed
