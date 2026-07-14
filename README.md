@@ -91,7 +91,7 @@ The resulting main file must be:
 Add the Lovelace JavaScript resource:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=91
+/local/anthbot-map/anthbot-map-card.js?v=94
 ```
 
 Resource type: **JavaScript module**.
@@ -242,6 +242,14 @@ Both options are also available under the **Interface settings** tab and are
 remembered in the current browser. Double-click or double-tap a map-only card
 to restore the full interface.
 
+The glass effect is a separate option and keeps a translucent blurred card surface:
+
+```yaml
+glass_background: true
+```
+
+`glass_background` and `transparent_background` cannot be active at the same time.
+
 ### Custom button actions
 
 Commands can call a custom Home Assistant service or script:
@@ -261,7 +269,7 @@ After updating the card files, increment the query string in the Lovelace
 resource URL to avoid browser caching, for example:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=91
+/local/anthbot-map/anthbot-map-card.js?v=94
 ```
 
 Then restart Home Assistant and hard-refresh the browser.
@@ -272,7 +280,7 @@ Then restart Home Assistant and hard-refresh the browser.
 
 - confirm the resource is a JavaScript module
 - confirm `/config/www/anthbot-map/anthbot-map-card.js` exists
-- open `/local/anthbot-map/anthbot-map-card.js?v=91` directly in the browser
+- open `/local/anthbot-map/anthbot-map-card.js?v=94` directly in the browser
 - hard-refresh with `Ctrl+Shift+R`
 
 ### Map or robot is missing
