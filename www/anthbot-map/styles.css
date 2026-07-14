@@ -83,6 +83,25 @@ canvas {
   width: 100%;
 }
 
+ha-card.map-only {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+ha-card.map-only .app-shell,
+ha-card.map-only .map-overlay,
+ha-card.map-only .app-panel,
+ha-card.map-only .calibration {
+  display: none !important;
+}
+
+ha-card.map-only .canvas-wrap {
+  background: transparent;
+  cursor: default;
+}
+
 .map-overlay {
   position: absolute;
   z-index: 2;
