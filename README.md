@@ -91,7 +91,7 @@ The resulting main file must be:
 Add the Lovelace JavaScript resource:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=86
+/local/anthbot-map/anthbot-map-card.js?v=87
 ```
 
 Resource type: **JavaScript module**.
@@ -226,11 +226,31 @@ fall back to English.
 
 ## Updating
 
+### Map-only mode
+
+Use `map_only: true` to hide every control and display only the map, for
+example as an overlay on a floorplan.
+
+### Custom button actions
+
+Commands can call a custom Home Assistant service or script:
+
+```yaml
+button_actions:
+  start:
+    service: script.anthbot_safe_start
+  dock:
+    service: script.anthbot_safe_dock
+```
+
+Supported command keys are `start`, `stop`, `dock`, `outer-edge`, `dock-edge`,
+and `connect`. Buttons without an override keep their built-in action.
+
 After updating the card files, increment the query string in the Lovelace
 resource URL to avoid browser caching, for example:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=86
+/local/anthbot-map/anthbot-map-card.js?v=87
 ```
 
 Then restart Home Assistant and hard-refresh the browser.
@@ -241,7 +261,7 @@ Then restart Home Assistant and hard-refresh the browser.
 
 - confirm the resource is a JavaScript module
 - confirm `/config/www/anthbot-map/anthbot-map-card.js` exists
-- open `/local/anthbot-map/anthbot-map-card.js?v=86` directly in the browser
+- open `/local/anthbot-map/anthbot-map-card.js?v=87` directly in the browser
 - hard-refresh with `Ctrl+Shift+R`
 
 ### Map or robot is missing
