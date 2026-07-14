@@ -1,5 +1,5 @@
-﻿import { AnthbotMapRenderer } from "./renderer.js?v=81";
-import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=81";
+﻿import { AnthbotMapRenderer } from "./renderer.js?v=86";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=86";
 import {
   adjustCalibration,
   cardToYaml,
@@ -7,7 +7,7 @@ import {
   readDecodedBoundaryCalibration,
   readRobotCalibration,
   resetCalibration,
-} from "./calibration.js?v=81";
+} from "./calibration.js?v=86";
 
 const ENTITY_MAP = {
   battery: ["sensor", ["battery_level"]],
@@ -117,7 +117,7 @@ class AnthbotMapCard extends HTMLElement {
     const root = this.shadowRoot;
     root.innerHTML = `
       <ha-card>
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=81")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=86")}">
         <section class="app-shell">
           <div class="top-menu">
             <div>
@@ -255,7 +255,7 @@ class AnthbotMapCard extends HTMLElement {
 
     const canvas = root.querySelector("canvas");
     const canvasWrap = root.querySelector(".canvas-wrap");
-    canvasWrap?.style.setProperty("--anthbot-map-height", `${Number(this.config.height) || 720}px`);
+    this.applyAutomaticMapSize(canvasWrap);
     canvasWrap?.addEventListener("click", (event) => {
       if (!this.mapExpanded && !event.target.closest("button")) {
         this.setMapExpanded(true);
@@ -270,6 +270,32 @@ class AnthbotMapCard extends HTMLElement {
     requestAnimationFrame(() => this.renderer?.resize());
     this.setMapExpanded(this.mapExpanded);
     this.updateRenderer();
+  }
+
+  applyAutomaticMapSize(canvasWrap) {
+    if (!canvasWrap) return;
+
+    const configuredHeight = Number(this.config.height);
+    if (Number.isFinite(configuredHeight) && configuredHeight > 0) {
+      canvasWrap.classList.remove("auto-map-size");
+      canvasWrap.style.setProperty("--anthbot-map-height", `${configuredHeight}px`);
+      return;
+    }
+
+    canvasWrap.classList.add("auto-map-size");
+    const imageUrl = this.config.image;
+    if (!imageUrl) return;
+
+    const probe = new Image();
+    probe.onload = () => {
+      if (!canvasWrap.isConnected || !probe.naturalWidth || !probe.naturalHeight) return;
+      canvasWrap.style.setProperty(
+        "--anthbot-map-aspect-ratio",
+        `${probe.naturalWidth} / ${probe.naturalHeight}`,
+      );
+      this.renderer?.resize();
+    };
+    probe.src = imageUrl;
   }
 
   updateRenderer() {
@@ -442,6 +468,8 @@ class AnthbotMapCard extends HTMLElement {
       this.createCommandTile(this.t("startLabel"), this.t("startSub"), "start"),
       this.createCommandTile(this.t("stopLabel"), this.t("stopSub"), "stop"),
       this.createCommandTile(this.t("homeLabel"), this.t("homeSub"), "dock"),
+      this.createCommandTile(this.t("outerEdgeLabel"), this.t("outerEdgeSub"), "outer-edge"),
+      this.createCommandTile(this.t("dockEdgeLabel"), this.t("dockEdgeSub"), "dock-edge"),
     );
 
     for (const zone of this.currentZones()) {
@@ -671,7 +699,7 @@ class AnthbotMapCard extends HTMLElement {
       calibration: this.calibration,
       robotCalibration: this.robotCalibration,
       decodedBoundaryCalibration: this.decodedBoundaryCalibration,
-      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=81"),
+      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=86"),
       noGoLabel: this.t("forbidden"),
       robotSize: this.config.robot_size ?? this.config.robotSize,
       robotImageRotation: this.config.robot_image_rotation ?? this.config.robotImageRotation,
@@ -743,6 +771,8 @@ class AnthbotMapCard extends HTMLElement {
       start: "start_full_mow",
       stop: "stop_mow",
       dock: "return_to_dock",
+      "outer-edge": "start_outer_edge_mow",
+      "dock-edge": "start_dock_edge_mow",
     };
     const service = serviceByCommand[command];
     if (service) {
