@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.0.25 / map card v97 — 2026-07-14
+
+### Fixed
+
+- A nyelvválasztó szövege és lenyíló listája saját sötét megjelenésben ismét jól olvasható.
+- A Home Assistant beviteli mezőszíneit csak bekapcsolt „HA téma használata” mellett veszi át.
+
+## 1.0.24 / map card v96 — 2026-07-14
+
+### Added
+
+- Új `theme_background: true` kapcsoló a Felület beállítások fülön.
+
+### Changed
+
+- A kártya alapból ismét a saját eredeti sötét színeit használja.
+- A Home Assistant theme színeit csak a „HA téma használata” kapcsoló bekapcsolásakor veszi át.
+
 ## 1.0.23 / map card v95 — 2026-07-14
 
 ### Fixed
