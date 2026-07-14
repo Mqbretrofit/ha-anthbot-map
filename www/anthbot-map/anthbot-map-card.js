@@ -1,5 +1,5 @@
-﻿import { AnthbotMapRenderer } from "./renderer.js?v=94";
-import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=94";
+﻿import { AnthbotMapRenderer } from "./renderer.js?v=95";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=95";
 import {
   adjustCalibration,
   cardToYaml,
@@ -7,7 +7,7 @@ import {
   readDecodedBoundaryCalibration,
   readRobotCalibration,
   resetCalibration,
-} from "./calibration.js?v=94";
+} from "./calibration.js?v=95";
 
 const ENTITY_MAP = {
   battery: ["sensor", ["battery_level"]],
@@ -144,7 +144,7 @@ class AnthbotMapCard extends HTMLElement {
       .join(" ");
     root.innerHTML = `
       <ha-card class="${cardClasses}">
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=94")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=95")}">
         <section class="app-shell">
           <div class="top-menu">
             <div>
@@ -756,7 +756,7 @@ class AnthbotMapCard extends HTMLElement {
       calibration: this.calibration,
       robotCalibration: this.robotCalibration,
       decodedBoundaryCalibration: this.decodedBoundaryCalibration,
-      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=94"),
+      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=95"),
       noGoLabel: this.t("forbidden"),
       robotSize: this.config.robot_size ?? this.config.robotSize,
       robotImageRotation: this.config.robot_image_rotation ?? this.config.robotImageRotation,
