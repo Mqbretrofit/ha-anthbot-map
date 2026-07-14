@@ -145,6 +145,10 @@ export function cardToYaml(config = {}, calibration, robotCalibration, decodedBo
     lines.push("map_only: true");
   }
 
+  if (config.transparent_background === true || config.transparentBackground === true) {
+    lines.push("transparent_background: true");
+  }
+
   if (config.robot_image || config.robotImage) {
     lines.push(`robot_image: ${quoteYaml(config.robot_image || config.robotImage)}`);
   }
