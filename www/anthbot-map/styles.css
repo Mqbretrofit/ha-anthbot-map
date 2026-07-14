@@ -112,10 +112,16 @@ ha-card.map-only .canvas-wrap {
 }
 
 ha-card.glass-background {
-  --anthbot-card-background: color-mix(in srgb, var(--anthbot-card-base) 68%, transparent);
-  --anthbot-secondary-background: color-mix(in srgb, var(--anthbot-secondary-base) 72%, transparent);
+  --anthbot-card-background: color-mix(in srgb, var(--anthbot-card-base) 45%, transparent);
+  --anthbot-secondary-background: color-mix(in srgb, var(--anthbot-secondary-base) 55%, transparent);
   backdrop-filter: var(--anthbot-backdrop-filter, blur(14px) saturate(120%));
   -webkit-backdrop-filter: var(--anthbot-backdrop-filter, blur(14px) saturate(120%));
+}
+
+ha-card.glass-background.map-expanded {
+  backdrop-filter: none;
+  overflow: visible;
+  -webkit-backdrop-filter: none;
 }
 
 ha-card.transparent-background,
