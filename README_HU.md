@@ -80,7 +80,7 @@ A fő fájl végleges helye:
 Add hozzá ezt a Lovelace JavaScript-erőforrást:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=86
+/local/anthbot-map/anthbot-map-card.js?v=87
 ```
 
 Az erőforrás típusa: **JavaScript module**. Az erőforráskezelő általában a
@@ -200,6 +200,30 @@ kínai és hagyományos kínai. Nem támogatott nyelvnél a kártya angolra vál
 
 ## Frissítés
 
+### Csak térkép mód
+
+Floorplan fölötti megjelenítéshez a kártya minden kezelőeleme elrejthető:
+
+```yaml
+map_only: true
+```
+
+### Egyedi gombműveletek
+
+A `start`, `stop`, `dock`, `outer-edge`, `dock-edge` és `connect` gombokhoz
+tetszőleges Home Assistant service vagy script rendelhető. Például zárt
+fűnyíróház felnyitását és ellenőrzését végző script indításához:
+
+```yaml
+button_actions:
+  start:
+    service: script.anthbot_biztonsagos_inditas
+  dock:
+    service: script.anthbot_biztonsagos_toltes
+```
+
+A nem felülírt gombok továbbra is a gyári Anthbot műveletet használják.
+
 A kártyafájlok frissítése után módosítsd a Lovelace-erőforrás címének végén a
 verziószámot, hogy a böngésző ne a régi fájlt használja, majd indítsd újra a
 Home Assistantot és nyomj `Ctrl+Shift+R`-t.
@@ -210,7 +234,7 @@ Home Assistantot és nyomj `Ctrl+Shift+R`-t.
 
 - ellenőrizd, hogy az erőforrás típusa JavaScript module
 - ellenőrizd a `/config/www/anthbot-map/anthbot-map-card.js` fájlt
-- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=86` címet
+- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=87` címet
 - frissítsd az oldalt `Ctrl+Shift+R` használatával
 
 ### Nem látható a térkép vagy a robot
