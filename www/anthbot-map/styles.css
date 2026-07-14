@@ -102,6 +102,11 @@ ha-card.map-only .canvas-wrap {
   cursor: default;
 }
 
+ha-card.transparent-background,
+ha-card.transparent-background .canvas-wrap {
+  background: transparent;
+}
+
 .map-overlay {
   position: absolute;
   z-index: 2;
