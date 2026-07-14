@@ -141,6 +141,10 @@ export function cardToYaml(config = {}, calibration, robotCalibration, decodedBo
     lines.push(`image: ${quoteYaml(config.image)}`);
   }
 
+  if (config.map_only === true || config.mapOnly === true) {
+    lines.push("map_only: true");
+  }
+
   if (config.robot_image || config.robotImage) {
     lines.push(`robot_image: ${quoteYaml(config.robot_image || config.robotImage)}`);
   }
@@ -241,6 +245,21 @@ export function cardToYaml(config = {}, calibration, robotCalibration, decodedBo
     }
   }
 
+  if (config.button_actions && typeof config.button_actions === "object") {
+    lines.push("button_actions:");
+    for (const [command, action] of Object.entries(config.button_actions)) {
+      if (typeof action === "string") {
+        lines.push(`  ${command}: ${quoteYaml(action)}`);
+        continue;
+      }
+      if (!action || typeof action !== "object" || !action.service) continue;
+      lines.push(`  ${command}:`);
+      lines.push(`    service: ${quoteYaml(action.service)}`);
+      appendYamlObject(lines, "    target", action.target, 6);
+      appendYamlObject(lines, "    data", action.data || action.service_data, 6);
+    }
+  }
+
   lines.push(calibrationToYaml(calibration));
   lines.push(robotCalibrationToYaml(robotCalibration));
   lines.push(decodedBoundaryCalibrationToYaml(decodedBoundaryCalibration));
@@ -250,6 +269,20 @@ export function cardToYaml(config = {}, calibration, robotCalibration, decodedBo
 
 function formatNumber(value) {
   return Number(value).toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function appendYamlObject(lines, label, value, indent) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return;
+  const entries = Object.entries(value);
+  if (!entries.length) return;
+  lines.push(`${label}:`);
+  const prefix = " ".repeat(indent);
+  for (const [key, item] of entries) {
+    if (["string", "number", "boolean"].includes(typeof item)) {
+      const rendered = typeof item === "string" ? quoteYaml(item) : String(item);
+      lines.push(`${prefix}${key}: ${rendered}`);
+    }
+  }
 }
 
 function quoteYaml(value) {
