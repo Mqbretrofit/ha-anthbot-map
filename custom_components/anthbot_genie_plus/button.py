@@ -15,6 +15,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import AnthbotGenieDataUpdateCoordinator
+from .commands import async_start_mowing
 from .zones import auto_zones, manual_zones
 
 
@@ -126,15 +127,13 @@ class AnthbotButtonEntity(
         if key == "connect_cloud":
             pass
         elif key == "start_full_mow":
-            await self.coordinator.client.async_publish_service_command(
-                cmd="app_state", data=1
-            )
-            await self.coordinator.client.async_publish_service_command(
-                cmd="mow_start", data=1
-            )
+            await async_start_mowing(self.coordinator, app_state=1)
         elif key == "start_outer_edge_mow":
-            await self.coordinator.client.async_publish_service_command(cmd="app_state", data=2)
-            await self.coordinator.client.async_publish_service_command(cmd="mow_start", data=1)
+            await async_start_mowing(
+                self.coordinator,
+                app_state=2,
+                expected_modes={"bordermowing", "edgemowing", "gototarget"},
+            )
         elif key == "start_dock_edge_mow":
             await self.coordinator.client.async_publish_service_command(cmd="nest_mow_start", data=1)
         elif key == "stop_mow":
