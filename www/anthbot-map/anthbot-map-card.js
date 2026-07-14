@@ -1,5 +1,5 @@
-﻿import { AnthbotMapRenderer } from "./renderer.js?v=87";
-import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=87";
+﻿import { AnthbotMapRenderer } from "./renderer.js?v=88";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=88";
 import {
   adjustCalibration,
   cardToYaml,
@@ -7,7 +7,7 @@ import {
   readDecodedBoundaryCalibration,
   readRobotCalibration,
   resetCalibration,
-} from "./calibration.js?v=87";
+} from "./calibration.js?v=88";
 
 const ENTITY_MAP = {
   battery: ["sensor", ["battery_level"]],
@@ -116,9 +116,14 @@ class AnthbotMapCard extends HTMLElement {
   render() {
     const root = this.shadowRoot;
     const mapOnly = this.config.map_only === true || this.config.mapOnly === true;
+    const transparentBackground =
+      this.config.transparent_background === true || this.config.transparentBackground === true;
+    const cardClasses = [mapOnly ? "map-only" : "", transparentBackground ? "transparent-background" : ""]
+      .filter(Boolean)
+      .join(" ");
     root.innerHTML = `
-      <ha-card class="${mapOnly ? "map-only" : ""}">
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=87")}">
+      <ha-card class="${cardClasses}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=88")}">
         <section class="app-shell">
           <div class="top-menu">
             <div>
@@ -700,7 +705,7 @@ class AnthbotMapCard extends HTMLElement {
       calibration: this.calibration,
       robotCalibration: this.robotCalibration,
       decodedBoundaryCalibration: this.decodedBoundaryCalibration,
-      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=87"),
+      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=88"),
       noGoLabel: this.t("forbidden"),
       robotSize: this.config.robot_size ?? this.config.robotSize,
       robotImageRotation: this.config.robot_image_rotation ?? this.config.robotImageRotation,
@@ -715,6 +720,8 @@ class AnthbotMapCard extends HTMLElement {
       showLegacyBoundary: this.config.show_legacy_boundary === true || this.config.showLegacyBoundary === true,
       showDecodedBoundary: this.showDecodedBoundary,
       showZones: this.showZones,
+      transparentBackground:
+        this.config.transparent_background === true || this.config.transparentBackground === true,
       boundaryColor: this.config.boundary_color || this.config.boundaryColor,
       boundaryWidth: this.config.boundary_width ?? this.config.boundaryWidth,
       charger: this.config.charger,
