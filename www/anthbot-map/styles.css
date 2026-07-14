@@ -1,7 +1,9 @@
 ﻿:host {
-  --anthbot-card-background: var(--ha-card-background, var(--card-background-color, #111820));
+  --anthbot-card-base: var(--card-background-color, var(--ha-card-background, #111820));
+  --anthbot-card-background: var(--anthbot-card-base);
   --anthbot-primary-background: var(--primary-background-color, #111820);
-  --anthbot-secondary-background: var(--secondary-background-color, #141d27);
+  --anthbot-secondary-base: var(--secondary-background-color, #141d27);
+  --anthbot-secondary-background: var(--anthbot-secondary-base);
   --anthbot-primary-text: var(--primary-text-color, #ffffff);
   --anthbot-secondary-text: var(--secondary-text-color, rgba(255, 255, 255, 0.7));
   --anthbot-divider: var(--divider-color, rgba(255, 255, 255, 0.1));
@@ -109,8 +111,18 @@ ha-card.map-only .canvas-wrap {
   cursor: default;
 }
 
+ha-card.glass-background {
+  --anthbot-card-background: color-mix(in srgb, var(--anthbot-card-base) 68%, transparent);
+  --anthbot-secondary-background: color-mix(in srgb, var(--anthbot-secondary-base) 72%, transparent);
+  backdrop-filter: var(--anthbot-backdrop-filter, blur(14px) saturate(120%));
+  -webkit-backdrop-filter: var(--anthbot-backdrop-filter, blur(14px) saturate(120%));
+}
+
 ha-card.transparent-background,
-ha-card.transparent-background .canvas-wrap {
+ha-card.transparent-background .app-shell,
+ha-card.transparent-background .canvas-wrap,
+ha-card.transparent-background .app-panel,
+ha-card.transparent-background .calibration {
   background: transparent;
 }
 
