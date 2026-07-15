@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.28 / map card v100 — 2026-07-15
+
+### Fixed
+
+- Mobilon kétujjas csippentéssel nagyítható és kicsinyíthető a nagy térkép.
+- A kétujjas nagyítás a gesztus középpontját követi, és közben a térkép mozgatható is.
+- A robot alapmérete nem fix képpontérték, hanem a megjelenített térkép szélességének 5,5%-a.
+- A mobilos főnézetben és nagy térképnézetben így azonos marad a robot térképhez viszonyított aránya.
+- A `robot_map_ratio` YAML-opcióval az arány egyedileg állítható; az alapérték `0.055`.
+- A nagy térkép bezárásakor a zoom és az eltolás visszaáll alaphelyzetbe.
+- A `+ / −` gombok nagyítási lépése 15%-ról 30%-ra nőtt.
+
 ## 1.0.26 / map card v98 — 2026-07-14
 
 ### Fixed
