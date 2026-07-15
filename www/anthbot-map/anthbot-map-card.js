@@ -1,5 +1,5 @@
-﻿import { AnthbotMapRenderer } from "./renderer.js?v=98";
-import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=98";
+﻿import { AnthbotMapRenderer } from "./renderer.js?v=100";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=100";
 import {
   adjustCalibration,
   cardToYaml,
@@ -7,7 +7,7 @@ import {
   readDecodedBoundaryCalibration,
   readRobotCalibration,
   resetCalibration,
-} from "./calibration.js?v=98";
+} from "./calibration.js?v=100";
 
 const ENTITY_MAP = {
   battery: ["sensor", ["battery_level"]],
@@ -152,7 +152,7 @@ class AnthbotMapCard extends HTMLElement {
       .join(" ");
     root.innerHTML = `
       <ha-card class="${cardClasses}">
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=98")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=100")}">
         <section class="app-shell">
           <div class="top-menu">
             <div>
@@ -765,9 +765,10 @@ class AnthbotMapCard extends HTMLElement {
       calibration: this.calibration,
       robotCalibration: this.robotCalibration,
       decodedBoundaryCalibration: this.decodedBoundaryCalibration,
-      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=98"),
+      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=100"),
       noGoLabel: this.t("forbidden"),
       robotSize: this.config.robot_size ?? this.config.robotSize,
+      robotMapRatio: this.config.robot_map_ratio ?? this.config.robotMapRatio,
       robotImageRotation: this.config.robot_image_rotation ?? this.config.robotImageRotation,
       robotHeadingSource: this.config.robot_heading_source || this.config.robotHeadingSource,
       robotHeadingOffset: this.config.robot_heading_offset ?? this.config.robotHeadingOffset,
@@ -1018,10 +1019,10 @@ class AnthbotMapCard extends HTMLElement {
 
   handleAction(action) {
     if (action === "zoom-in") {
-      this.renderer.view.zoom = Math.min(8, this.renderer.view.zoom * 1.15);
+      this.renderer.view.zoom = Math.min(8, this.renderer.view.zoom * 1.3);
       this.renderer.draw();
     } else if (action === "zoom-out") {
-      this.renderer.view.zoom = Math.max(0.2, this.renderer.view.zoom / 1.15);
+      this.renderer.view.zoom = Math.max(0.2, this.renderer.view.zoom / 1.3);
       this.renderer.draw();
     } else if (action === "rotate-left") {
       this.renderer.rotate(-Math.PI / 18);
@@ -1100,6 +1101,9 @@ class AnthbotMapCard extends HTMLElement {
   setMapExpanded(expanded) {
     this.mapExpanded = Boolean(expanded);
     this.shadowRoot?.querySelector("ha-card")?.classList.toggle("map-expanded", this.mapExpanded);
+    if (!this.mapExpanded) {
+      this.renderer?.resetView();
+    }
     requestAnimationFrame(() => this.renderer?.resize());
   }
 
