@@ -23,6 +23,7 @@ a töltőt és a megtett útvonalat a kert saját felülnézeti fényképén jel
 - saját légi vagy drónfelvétel használata háttérképként
 - zónák, tiltott területek és nyírási útvonal megjelenítése
 - teljes képernyő, nagyítás, mozgatás, forgatás és kalibrálás
+- lebegő, áttetsző vezérlőmenü, amely mellett a kert térképe látható marad
 - látható pozíció- és iránykijelzés
 - a hivatalos alkalmazással megegyező milliradiános irányszámítás
 - a kalibrálópanelen elkészített YAML közvetlenül kimásolható
@@ -80,7 +81,7 @@ A fő fájl végleges helye:
 Add hozzá ezt a Lovelace JavaScript-erőforrást:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=100
+/local/anthbot-map/anthbot-map-card.js?v=101
 ```
 
 Az erőforrás típusa: **JavaScript module**. Az erőforráskezelő általában a
@@ -259,7 +260,7 @@ Home Assistantot és nyomj `Ctrl+Shift+R`-t.
 
 - ellenőrizd, hogy az erőforrás típusa JavaScript module
 - ellenőrizd a `/config/www/anthbot-map/anthbot-map-card.js` fájlt
-- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=100` címet
+- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=101` címet
 - frissítsd az oldalt `Ctrl+Shift+R` használatával
 
 ### Nem látható a térkép vagy a robot
