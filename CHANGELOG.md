@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.21 / map card v93 — 2026-07-14
+
+### Fixed
+
+- Az üveghatás közvetlenül bekerült a kártya Shadow DOM-jába, mert a külső theme `ha-card` CSS-szabályai oda nem jutnak be.
+- A kártya és a másodlagos panelek áttetsző témahátteret, elmosást és színtelítést kapnak.
+
 ## 1.0.20 / map card v92 — 2026-07-14
 
 ### Fixed
