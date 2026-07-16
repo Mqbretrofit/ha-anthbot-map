@@ -41,6 +41,8 @@ export class AnthbotMapRenderer {
       rotation: Number(options.rotation) || 0,
     };
     this.drag = null;
+    this.pointers = new Map();
+    this.pinch = null;
     this.decodedBoundaryCalibration = options.decodedBoundaryCalibration || {};
 
     this.onPointerDown = this.onPointerDown.bind(this);
@@ -615,10 +617,13 @@ export class AnthbotMapRenderer {
     ctx.translate(point.x, point.y);
     ctx.rotate(yaw);
     if (this.robotImage) {
+      const configuredSize = Number(this.options.robotSize);
+      const mapRatio = Number(this.options.robotMapRatio) || 0.055;
+      const baseSize = Number.isFinite(configuredSize) && configuredSize > 0
+        ? configuredSize * (Number(this.view.zoom) || 1)
+        : geometry.map.width * mapRatio;
       const size = clamp(
-        (Number(this.options.robotSize) || 42) *
-          (Number(robotCalibration.scaleX) || 1) *
-          (Number(this.view.zoom) || 1),
+        baseSize * (Number(robotCalibration.scaleX) || 1),
         8,
         260,
       );
@@ -637,7 +642,11 @@ export class AnthbotMapRenderer {
       return;
     }
 
-    const radius = clamp(9 * (Number(this.view.zoom) || 1), 4, 64);
+    const radius = clamp(
+      geometry.map.width * 0.012,
+      4,
+      64,
+    );
     ctx.fillStyle = COLORS.robot;
     ctx.strokeStyle = COLORS.robotStroke;
     ctx.lineWidth = 2;
@@ -798,6 +807,12 @@ export class AnthbotMapRenderer {
 
   onPointerDown(event) {
     this.canvas.setPointerCapture(event.pointerId);
+    this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (this.pointers.size >= 2) {
+      this.startPinch();
+      this.drag = null;
+      return;
+    }
     this.drag = {
       x: event.clientX,
       y: event.clientY,
@@ -807,6 +822,32 @@ export class AnthbotMapRenderer {
   }
 
   onPointerMove(event) {
+    if (this.pointers.has(event.pointerId)) {
+      this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }
+    if (this.pinch && this.pointers.size >= 2) {
+      const [first, second] = [...this.pointers.values()];
+      const distance = Math.max(1, Math.hypot(second.x - first.x, second.y - first.y));
+      const midpoint = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+      const factor = distance / this.pinch.distance;
+      const zoom = clamp(this.pinch.zoom * factor, 0.2, 8);
+      const appliedFactor = zoom / this.pinch.zoom;
+      const rect = this.canvas.getBoundingClientRect();
+      const startLocal = {
+        x: this.pinch.midpoint.x - rect.left,
+        y: this.pinch.midpoint.y - rect.top,
+      };
+      const currentLocal = { x: midpoint.x - rect.left, y: midpoint.y - rect.top };
+      const startCenter = {
+        x: rect.width / 2 + this.pinch.panX,
+        y: rect.height / 2 + this.pinch.panY,
+      };
+      this.view.zoom = zoom;
+      this.view.panX = currentLocal.x + (startCenter.x - startLocal.x) * appliedFactor - rect.width / 2;
+      this.view.panY = currentLocal.y + (startCenter.y - startLocal.y) * appliedFactor - rect.height / 2;
+      this.draw();
+      return;
+    }
     if (!this.drag) {
       return;
     }
@@ -817,10 +858,33 @@ export class AnthbotMapRenderer {
   }
 
   onPointerUp(event) {
-    if (this.drag) {
+    if (this.canvas.hasPointerCapture(event.pointerId)) {
       this.canvas.releasePointerCapture(event.pointerId);
     }
-    this.drag = null;
+    this.pointers.delete(event.pointerId);
+    this.pinch = null;
+    if (this.pointers.size === 1) {
+      const [remaining] = this.pointers.values();
+      this.drag = {
+        x: remaining.x,
+        y: remaining.y,
+        panX: this.view.panX,
+        panY: this.view.panY,
+      };
+    } else {
+      this.drag = null;
+    }
+  }
+
+  startPinch() {
+    const [first, second] = [...this.pointers.values()];
+    this.pinch = {
+      distance: Math.max(1, Math.hypot(second.x - first.x, second.y - first.y)),
+      midpoint: { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 },
+      zoom: this.view.zoom,
+      panX: this.view.panX,
+      panY: this.view.panY,
+    };
   }
 
   onWheel(event) {
