@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.29 / map card v101 — 2026-07-16
+
+### Added
+
+- Új lebegő, áttetsző vezérlőmenü, amely mellett a kert térképe folyamatosan látható marad.
+- A menü a térkép jobb alsó sarkában lévő gombbal nyitható és zárható.
+
+### Changed
+
+- A vezérlők, beállítások, állapot, diagnosztika és kalibráció egy görgethető üvegpanelen jelennek meg.
+- A Lovelace-erőforrás gyorsítótár-verziója `v101`.
+
 ## 1.0.28 / map card v100 — 2026-07-15
 
 ### Fixed
