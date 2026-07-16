@@ -1,5 +1,5 @@
 ﻿:host {
-  --anthbot-card-background: var(--ha-card-background, var(--card-background-color, #111820));
+  --anthbot-card-background: var(--card-background-color, var(--ha-card-background, #111820));
   --anthbot-primary-background: var(--primary-background-color, #111820);
   --anthbot-secondary-background: var(--secondary-background-color, #141d27);
   --anthbot-primary-text: var(--primary-text-color, #ffffff);
@@ -110,7 +110,10 @@ ha-card.map-only .canvas-wrap {
 }
 
 ha-card.transparent-background,
-ha-card.transparent-background .canvas-wrap {
+ha-card.transparent-background .app-shell,
+ha-card.transparent-background .canvas-wrap,
+ha-card.transparent-background .app-panel,
+ha-card.transparent-background .calibration {
   background: transparent;
 }
 
