@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.20 / map card v92 — 2026-07-14
+
+### Fixed
+
+- A kártya elsődlegesen a Home Assistant `card-background-color` témahátterét használja a fekete `ha-card-background` helyett.
+- A `transparent_background` most már az egész kártyát átlátszóvá teszi, beleértve a fejlécet, a paneleket és a kalibrációs részt is.
+
 ## 1.0.19 / map card v91 — 2026-07-14
 
 ### Changed
