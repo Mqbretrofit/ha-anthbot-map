@@ -29,6 +29,7 @@ robot on a top-down photograph of the garden.
 - live and historical mowing trail
 - charger and robot icons
 - full-screen view, zoom, pan, rotation, and calibration controls
+- floating translucent control menu that keeps the garden map visible
 - visible position and direction badges
 - robot heading calculated like the official app from milliradian `pose.yaw`
 - generated YAML can be copied from the card calibration panel
@@ -91,7 +92,7 @@ The resulting main file must be:
 Add the Lovelace JavaScript resource:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=100
+/local/anthbot-map/anthbot-map-card.js?v=101
 ```
 
 Resource type: **JavaScript module**.
@@ -277,7 +278,7 @@ After updating the card files, increment the query string in the Lovelace
 resource URL to avoid browser caching, for example:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=100
+/local/anthbot-map/anthbot-map-card.js?v=101
 ```
 
 Then restart Home Assistant and hard-refresh the browser.
@@ -288,7 +289,7 @@ Then restart Home Assistant and hard-refresh the browser.
 
 - confirm the resource is a JavaScript module
 - confirm `/config/www/anthbot-map/anthbot-map-card.js` exists
-- open `/local/anthbot-map/anthbot-map-card.js?v=100` directly in the browser
+- open `/local/anthbot-map/anthbot-map-card.js?v=101` directly in the browser
 - hard-refresh with `Ctrl+Shift+R`
 
 ### Map or robot is missing
