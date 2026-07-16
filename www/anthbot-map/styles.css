@@ -1,7 +1,8 @@
 ﻿:host {
-  --anthbot-card-background: var(--card-background-color, var(--ha-card-background, #111820));
+  --anthbot-card-base: var(--card-background-color, var(--ha-card-background, #111820));
+  --anthbot-card-background: color-mix(in srgb, var(--anthbot-card-base) 68%, transparent);
   --anthbot-primary-background: var(--primary-background-color, #111820);
-  --anthbot-secondary-background: var(--secondary-background-color, #141d27);
+  --anthbot-secondary-background: color-mix(in srgb, var(--secondary-background-color, #141d27) 72%, transparent);
   --anthbot-primary-text: var(--primary-text-color, #ffffff);
   --anthbot-secondary-text: var(--secondary-text-color, rgba(255, 255, 255, 0.7));
   --anthbot-divider: var(--divider-color, rgba(255, 255, 255, 0.1));
@@ -10,11 +11,13 @@
 }
 
 ha-card {
+  backdrop-filter: var(--anthbot-backdrop-filter, blur(14px) saturate(120%));
   background: var(--anthbot-card-background);
   border-radius: var(--ha-card-border-radius, 8px);
   box-shadow: var(--ha-card-box-shadow, 0 12px 34px rgba(0, 0, 0, 0.28));
   display: block;
   overflow: hidden;
+  -webkit-backdrop-filter: var(--anthbot-backdrop-filter, blur(14px) saturate(120%));
 }
 
 .app-shell {
