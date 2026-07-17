@@ -832,21 +832,38 @@ class AnthbotMapSensorEntity(
         state = self.coordinator.reported_state
         map_definition = state.get("_map_definition")
         path_definition = state.get("_path_definition")
+        path_points = _definition_path_points(path_definition) or state.get("path")
 
         return {
             "pose": state.get("pose"),
+            "mower_status": _general_mower_status(state),
+            "robot_status_raw": _raw_robot_status(state),
             "cur_pose": state.get("curPose") or state.get("cur_pose"),
             "map_scan_pose": state.get("mapScanPose") or state.get("map_scan_pose"),
-            "path": state.get("path"),
+            "path": path_points,
+            "cloud_path": path_points,
+            "mowed_path": path_points,
+            "path_id": path_definition.get("path_id") if isinstance(path_definition, dict) else None,
+            "path_start": path_definition.get("start") if isinstance(path_definition, dict) else None,
+            "path_task_type": path_definition.get("task_type") if isinstance(path_definition, dict) else None,
+            "path_point_count": path_definition.get("point_count") if isinstance(path_definition, dict) else None,
+            "path_coordinate_scale": path_definition.get("coordinate_scale") if isinstance(path_definition, dict) else None,
+            "path_first_point": _definition_path_first_point(path_definition),
             "map_time": state.get("map_time"),
             "path_time": state.get("path_time"),
             "area_time": state.get("area_time"),
+            "history_path_info": state.get("_history_path_info"),
+            "history_path_source": state.get("_history_path_source"),
+            "history_path_live_refresh": state.get("_history_path_live_refresh"),
+            "history_path_refresh_interval": state.get("_history_path_refresh_interval"),
+            "history_path_download_source": path_definition.get("_download_source") if isinstance(path_definition, dict) else None,
             "area_definition": state.get("_area_definition"),
             "map_definition_status": _definition_status(map_definition),
             "path_definition_status": _definition_status(path_definition),
             "map_raster": _definition_map_raster(map_definition),
             "map_definition_preview": _definition_preview(map_definition),
             "path_definition_preview": _definition_preview(path_definition),
+            "path_point_types": _definition_path_type_counts(path_definition),
             "map_binary_paths": _definition_binary_paths(map_definition),
             "path_binary_paths": _definition_binary_paths(path_definition),
             "map_definition_error": state.get("_map_definition_error"),
@@ -887,6 +904,28 @@ def _definition_map_raster(value: Any) -> dict[str, Any] | None:
     if isinstance(raster, dict):
         return raster
     return None
+
+
+def _definition_path_points(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, dict):
+        return []
+    points = value.get("_path_points")
+    if not isinstance(points, list):
+        return []
+    return [point for point in points if isinstance(point, dict)]
+
+
+def _definition_path_first_point(value: Any) -> dict[str, Any] | None:
+    points = _definition_path_points(value)
+    return points[0] if points else None
+
+
+def _definition_path_type_counts(value: Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for point in _definition_path_points(value):
+        point_type = str(point.get("type", "missing"))
+        counts[point_type] = counts.get(point_type, 0) + 1
+    return counts
 
 
 def _small_shape(value: Any) -> Any:

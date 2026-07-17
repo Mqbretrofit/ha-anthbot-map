@@ -22,6 +22,9 @@ a töltőt és a megtett útvonalat a kert saját felülnézeti fényképén jel
 - szüneteltetés, leállítás és visszaküldés a töltőre
 - saját légi vagy drónfelvétel használata háttérképként
 - zónák, tiltott területek és nyírási útvonal megjelenítése
+- az alkalmazás történeti nyírási útvonalának letöltése a felhőből
+- a nyírási munkamenet megőrzése nézetváltás és oldalfrissítés után
+- opcionális, állítható szélességű lenyírt terület megjelenítése
 - teljes képernyő, nagyítás, mozgatás, forgatás és kalibrálás
 - lebegő, áttetsző vezérlőmenü, amely mellett a kert térképe látható marad
 - látható pozíció- és iránykijelzés
@@ -40,6 +43,7 @@ parancsok modellenként és firmware-verziónként eltérhetnek.
 custom_components/anthbot_genie_plus/   Home Assistant-integráció
 www/anthbot-map/                        Lovelace térképkártya
 tools/anthbot_dump.py                   Opcionális diagnosztikai segédprogram
+examples/                               Minta YAML
 ```
 
 ## Telepítés HACS használatával
@@ -61,8 +65,9 @@ tools/anthbot_dump.py                   Opcionális diagnosztikai segédprogram
 8. Keresd meg az **Anthbot Genie Plus** integrációt, majd add meg az
    Anthbot-fiókod adatait.
 
-A HACS az integrációt telepíti. A térképkártya fájljait jelenleg külön kell
-bemásolni.
+A HACS az integrációt telepíti és a későbbi frissítéseket kezeli. A GitHub
+Release oldalról letölthető teljes ZIP az integrációt, a kártyát, a mintát és
+a dokumentációt egyben tartalmazza.
 
 ## A térképkártya telepítése
 
@@ -81,7 +86,7 @@ A fő fájl végleges helye:
 Add hozzá ezt a Lovelace JavaScript-erőforrást:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=101
+/local/anthbot-map/anthbot-map-card.js?v=126
 ```
 
 Az erőforrás típusa: **JavaScript module**. Az erőforráskezelő általában a
@@ -260,7 +265,7 @@ Home Assistantot és nyomj `Ctrl+Shift+R`-t.
 
 - ellenőrizd, hogy az erőforrás típusa JavaScript module
 - ellenőrizd a `/config/www/anthbot-map/anthbot-map-card.js` fájlt
-- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=101` címet
+- nyisd meg közvetlenül a `/local/anthbot-map/anthbot-map-card.js?v=126` címet
 - frissítsd az oldalt `Ctrl+Shift+R` használatával
 
 ### Nem látható a térkép vagy a robot

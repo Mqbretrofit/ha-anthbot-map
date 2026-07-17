@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.0.54 / map card v126 — 2026-07-17
+
+### Added
+
+- Anthbot alkalmazás-stílusú történeti útvonal letöltése és MGS v1–v3 dekódolása.
+- Nyers, gzip- és zlib-tömörített felhős útvonalfájlok támogatása.
+- Útvonalmunkamenetek megőrzése nézetváltás és oldalfrissítés után.
+- Állítható szélességű, áttetsző lenyírt terület réteg.
+- Új útvonal- és letöltési diagnosztikai attribútumok.
+- Teljes telepítő ZIP-et készítő automatikus GitHub Release folyamat.
+
+### Changed
+
+- Aktív nyírás közben az integráció rendszeresen frissíti a történeti útvonalat.
+- A felhős és élő útvonal külön rétegen jelenik meg.
+- A robot mérete a zoommal együtt változik.
+- A Lovelace-erőforrás gyorsítótár-verziója `v126`.
+
+### Fixed
+
+- Távoli vagy hibás útvonalpontok nem kapcsolódnak össze hosszú átlós vonallal.
+- Dokkolás és töltés közben a kártya nem rögzít hamis nyírási pontokat.
+
+A v1.0.29 és v1.0.54 közötti részletes összehasonlítás:
+[CHANGELOG_v1.0.54_HU.md](CHANGELOG_v1.0.54_HU.md).
+
 ## 1.0.29 / map card v101 — 2026-07-16
 
 ### Added

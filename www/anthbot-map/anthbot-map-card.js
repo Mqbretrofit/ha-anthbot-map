@@ -1,4 +1,4 @@
-﻿import { AnthbotMapRenderer } from "./renderer.js?v=101";
+import { AnthbotMapRenderer } from "./renderer.js?v=126";
 import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=101";
 import {
   adjustCalibration,
@@ -153,9 +153,10 @@ class AnthbotMapCard extends HTMLElement {
       .join(" ");
     root.innerHTML = `
       <ha-card class="${cardClasses}">
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=101")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=126")}">
         <style>
-          .anthbot-menu-toggle { position:absolute; right:14px; bottom:14px; z-index:40; min-height:46px; padding:9px 15px; border:1px solid rgba(255,255,255,.38); border-radius:999px; background:rgba(10,18,26,.48); color:#fff; backdrop-filter:blur(10px); box-shadow:0 8px 28px rgba(0,0,0,.26); font:inherit; font-weight:800; cursor:pointer; }
+          .anthbot-menu-toggle { position:absolute; z-index:40; min-height:46px; padding:9px 15px; border:1px solid rgba(255,255,255,.38); border-radius:999px; background:rgba(10,18,26,.48); color:#fff; backdrop-filter:blur(10px); box-shadow:0 8px 28px rgba(0,0,0,.26); font:inherit; font-weight:800; cursor:pointer; }
+          .anthbot-menu-toggle { right:14px; bottom:14px; }
           .anthbot-glass-panel { display:none; position:absolute; z-index:39; right:12px; bottom:70px; width:min(920px,calc(100% - 24px)); max-height:calc(100% - 84px); overflow:auto; border:1px solid rgba(255,255,255,.34); border-radius:18px; background:rgba(9,18,27,.18); color:#fff; backdrop-filter:blur(10px) saturate(115%); box-shadow:0 16px 44px rgba(0,0,0,.24); overscroll-behavior:contain; }
           .anthbot-glass-panel.open { display:block; }
           .anthbot-glass-head { position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between; padding:9px 12px 4px; background:linear-gradient(rgba(9,18,27,.62),rgba(9,18,27,0)); }
@@ -164,8 +165,6 @@ class AnthbotMapCard extends HTMLElement {
           .anthbot-glass-panel .top-menu { background:rgba(7,15,23,.30) !important; border:1px solid rgba(255,255,255,.10); border-radius:14px; margin:2px 10px 8px; }
           .anthbot-glass-panel .panel-tabs { padding-inline:10px; }
           .anthbot-glass-panel .command-dock { display:block !important; position:static !important; inset:auto !important; transform:none !important; margin:8px 10px 12px; background:rgba(6,14,22,.24) !important; }
-          .anthbot-glass-panel > .calibration { background:rgba(6,14,22,.20) !important; color:#fff !important; margin:8px 10px 12px; border-color:rgba(255,255,255,.16) !important; }
-          .anthbot-glass-panel > .calibration summary { color:#fff !important; }
           @media (max-width:720px) { .anthbot-glass-panel { left:8px; right:8px; bottom:66px; width:auto; max-height:72%; } .anthbot-menu-toggle { right:10px; bottom:10px; } }
         </style>
         <section class="app-shell">
@@ -229,9 +228,9 @@ class AnthbotMapCard extends HTMLElement {
               </button>
             </div>
           </div>
-          <button type="button" class="anthbot-menu-toggle" data-floating-menu="toggle">☰ Menü</button>
+          <button type="button" class="anthbot-menu-toggle" data-floating-menu="toggle">&#9776; Men&uuml;</button>
           <section class="anthbot-glass-panel">
-            <div class="anthbot-glass-head"><strong>Anthbot vezérlés</strong><button type="button" class="anthbot-glass-close" data-floating-menu="close">×</button></div>
+            <div class="anthbot-glass-head"><strong>Anthbot vez&eacute;rl&eacute;s</strong><button type="button" class="anthbot-glass-close" data-floating-menu="close">&times;</button></div>
           </section>
         </div>
         <section class="app-panel">
@@ -294,7 +293,6 @@ class AnthbotMapCard extends HTMLElement {
       root.querySelector(".app-shell"),
       root.querySelector(".app-panel"),
       root.querySelector(".command-dock"),
-      root.querySelector("ha-card > .calibration"),
     ].forEach((element) => { if (element) glassPanel?.appendChild(element); });
     glassPanel?.classList.toggle("open", this.floatingMenuOpen);
 
@@ -323,7 +321,6 @@ class AnthbotMapCard extends HTMLElement {
         glassPanel?.classList.toggle("open", this.floatingMenuOpen);
       });
     });
-
     const canvas = root.querySelector("canvas");
     const canvasWrap = root.querySelector(".canvas-wrap");
     this.applyAutomaticMapSize(canvasWrap);
@@ -401,12 +398,32 @@ class AnthbotMapCard extends HTMLElement {
       cur_pose: attributes.cur_pose,
       map_scan_pose: attributes.map_scan_pose,
       path: attributes.path,
+      mowed_path: attributes.mowed_path,
+      mowedPath: attributes.mowedPath,
+      mowing_path: attributes.mowing_path,
+      mowingPath: attributes.mowingPath,
+      track: attributes.track,
+      tracks: attributes.tracks,
+      trajectory: attributes.trajectory,
+      cloud_path: attributes.cloud_path,
+      cloudPath: attributes.cloudPath,
+      path_id: attributes.path_id,
+      path_start: attributes.path_start,
+      path_task_type: attributes.path_task_type,
+      path_point_count: attributes.path_point_count,
+      path_coordinate_scale: attributes.path_coordinate_scale,
+      path_first_point: attributes.path_first_point,
+      path_time: attributes.path_time,
+      history_path_info: attributes.history_path_info,
+      history_path_source: attributes.history_path_source,
       map_raster: attributes.map_raster,
       map_definition: attributes.map_definition,
       path_definition: attributes.path_definition,
       map_binary_paths: attributes.map_binary_paths,
       path_binary_paths: attributes.path_binary_paths,
       mower_status: this.getRelatedEntity("status")?.state || attributes.mower_status || this.entity.state,
+      robot_status_raw: attributes.robot_status_raw,
+      history_path_live_refresh: attributes.history_path_live_refresh,
       area_definition: attributes.area_definition,
     });
 
@@ -809,9 +826,13 @@ class AnthbotMapCard extends HTMLElement {
       robotHeadingOffset: this.config.robot_heading_offset ?? this.config.robotHeadingOffset,
       robotMowingHeadingOffset: this.config.robot_mowing_heading_offset ?? this.config.robotMowingHeadingOffset,
       showMowedPath: this.config.show_mowed_path !== false,
+      showMowedCoverage: this.config.show_mowed_coverage !== false && this.config.showMowedCoverage !== false,
       mowedPathSource: this.config.mowed_path_source || this.config.mowedPathSource,
       mowedPathColor: this.config.mowed_path_color || this.config.mowedPathColor,
       mowedPathWidth: this.config.mowed_path_width ?? this.config.mowedPathWidth,
+      mowedCoverageColor: this.config.mowed_coverage_color || this.config.mowedCoverageColor,
+      mowedCoverageWidth: this.config.mowed_coverage_width ?? this.config.mowedCoverageWidth,
+      mowedPathStorageKey: this.mowedPathStorageKey(),
       showBoundary: this.config.show_boundary !== false,
       showLegacyBoundary: this.config.show_legacy_boundary === true || this.config.showLegacyBoundary === true,
       showDecodedBoundary: this.showDecodedBoundary,
@@ -1096,6 +1117,10 @@ class AnthbotMapCard extends HTMLElement {
 
   interfaceStorageKey(entity = this.config.entity) {
     return `anthbot-map-interface:${entity || "default"}`;
+  }
+
+  mowedPathStorageKey(entity = this.config.entity) {
+    return `anthbot-map-mowed-path:${entity || "default"}`;
   }
 
   readInterfaceSettings(entity) {
@@ -1431,6 +1456,10 @@ window.customCards.push({
   name: "Anthbot terkep kartya",
   description: "Canvas terkepmegjelenito Anthbot map sensorokhoz",
 });
+
+
+
+
 
 
 

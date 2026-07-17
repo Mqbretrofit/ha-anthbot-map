@@ -73,6 +73,34 @@ class AnthbotDeviceRegion:
 
 def decode_device_definition(raw_bytes: bytes, label: str) -> dict[str, Any] | list[Any]:
     """Decode Anthbot device file payloads from JSON or compact binary formats."""
+    if "path" in label.lower():
+        path_payloads: list[tuple[str, bytes]] = [("raw", raw_bytes)]
+        if raw_bytes.startswith(b"\x1f\x8b"):
+            try:
+                path_payloads.append(("gzip", gzip.decompress(raw_bytes)))
+            except (OSError, EOFError, zlib.error):
+                pass
+        try:
+            inflated = zlib.decompress(raw_bytes)
+            if all(inflated != payload for _, payload in path_payloads):
+                path_payloads.append(("zlib", inflated))
+        except zlib.error:
+            pass
+
+        for compression, payload in path_payloads:
+            path_definition = _decode_path_definition(payload)
+            if path_definition is not None:
+                path_definition["compression"] = compression
+                path_definition["compressed_size"] = len(raw_bytes)
+                path_definition["decoded_size"] = len(payload)
+                return path_definition
+        return {
+            "format": "unsupported",
+            "size": len(raw_bytes),
+            "first_bytes": raw_bytes[:32].hex(" "),
+            "_path_points": [],
+        }
+
     if "map" in label.lower():
         map_raster = _decode_map_raster(raw_bytes)
         if map_raster is not None:
@@ -112,6 +140,104 @@ def decode_device_definition(raw_bytes: bytes, label: str) -> dict[str, Any] | l
     return {
         "_binary_probe": _probe_binary_definition(raw_bytes, label, errors),
     }
+
+
+def _decode_path_definition(raw_bytes: bytes) -> dict[str, Any] | None:
+    """Decode the Genie/MGS historical path format used by the Anthbot app."""
+    if len(raw_bytes) < 2:
+        return None
+
+    header_len = int(raw_bytes[0])
+    protocol_version = int(raw_bytes[1])
+    if protocol_version == 0:
+        return {
+            "format": "mgs-v0",
+            "header_len": header_len,
+            "protocol_version": protocol_version,
+            "point_count": 0,
+            "_path_points": [],
+        }
+    if protocol_version not in (1, 2, 3):
+        return None
+
+    try:
+        format_name = f"mgs-v{protocol_version}"
+        if protocol_version == 1:
+            if header_len < 21 or len(raw_bytes) < header_len:
+                return None
+            shifted_point_len = int(raw_bytes[3]) if len(raw_bytes) > 3 else 0
+            shifted_declared_size = struct.unpack_from("<i", raw_bytes, 4)[0] if len(raw_bytes) >= 8 else -1
+            shifted_available = (
+                (len(raw_bytes) - header_len) // shifted_point_len
+                if shifted_point_len > 0 and len(raw_bytes) >= header_len
+                else -1
+            )
+            if (
+                header_len >= 22
+                and shifted_point_len >= 5
+                and 0 <= shifted_declared_size <= shifted_available
+                and len(raw_bytes) >= 22
+            ):
+                point_len = shifted_point_len
+                task_type = int(raw_bytes[2])
+                declared_size = shifted_declared_size
+                start = struct.unpack_from("<i", raw_bytes, 8)[0]
+                angle = struct.unpack_from("<h", raw_bytes, 12)[0]
+                path_id = struct.unpack_from("<Q", raw_bytes, 14)[0]
+                format_name = "mgs-v1-history"
+            else:
+                point_len = int(raw_bytes[2])
+                task_type = -1
+                angle = struct.unpack_from("<h", raw_bytes, 3)[0]
+                declared_size = struct.unpack_from("<i", raw_bytes, 5)[0]
+                start = struct.unpack_from("<i", raw_bytes, 9)[0]
+                path_id = struct.unpack_from("<Q", raw_bytes, 13)[0]
+        else:
+            if header_len < 22 or len(raw_bytes) < header_len:
+                return None
+            point_len = int(raw_bytes[2])
+            task_type = int(raw_bytes[3])
+            angle = struct.unpack_from("<h", raw_bytes, 4)[0]
+            declared_size = struct.unpack_from("<i", raw_bytes, 6)[0]
+            start = struct.unpack_from("<i", raw_bytes, 10)[0]
+            path_id = struct.unpack_from("<Q", raw_bytes, 14)[0]
+
+        minimum_point_len = 6 if protocol_version == 3 else 5
+        if point_len < minimum_point_len or declared_size < 0:
+            return None
+
+        point_count = min(declared_size, (len(raw_bytes) - header_len) // point_len)
+        points: list[dict[str, int]] = []
+        coordinate_scale = 1 if format_name == "mgs-v1-history" else 10
+        for index in range(point_count):
+            offset = header_len + (index * point_len)
+            x, y = struct.unpack_from("<hh", raw_bytes, offset)
+            point = {
+                "x": x * coordinate_scale,
+                "y": y * coordinate_scale,
+                "angle": angle,
+                "type": int(raw_bytes[offset + 4]),
+            }
+            if protocol_version == 3:
+                point["clean_time"] = int(raw_bytes[offset + 5])
+            points.append(point)
+
+        return {
+            "format": format_name,
+            "header_len": header_len,
+            "protocol_version": protocol_version,
+            "task_type": task_type,
+            "path_id": path_id,
+            "declared_size": declared_size,
+            "start": start,
+            "angle": angle,
+            "point_len": point_len,
+            "coordinate_scale": coordinate_scale,
+            "point_count": len(points),
+            "_path_points": points,
+        }
+    except (IndexError, struct.error, ValueError):
+        return None
 
 
 def _probe_binary_definition(
@@ -845,15 +971,17 @@ class AnthbotCloudApiClient:
         *,
         file_prefix: str,
         sub_category: str,
+        filename: str | None = None,
+        category: str = "device",
     ) -> dict[str, Any] | list[Any]:
         """Fetch a mower JSON file from the app-style presigned URL endpoint."""
         self._require_token()
 
         url = f"https://{self._host}/api/v1/device/v2/presigned_url"
         params = {
-            "filename": f"{file_prefix}_{serial_number}.txt",
+            "filename": filename or f"{file_prefix}_{serial_number}.txt",
             "sn": serial_number,
-            "category": "device",
+            "category": category,
             "sub_category": sub_category,
             "verification_token": self.build_verification_token(serial_number),
         }
@@ -915,7 +1043,42 @@ class AnthbotCloudApiClient:
             raise AnthbotGenieApiError(
                 f"{sub_category} definition payload type is not JSON object/array"
             )
+        if isinstance(definition, dict):
+            definition["_download_source"] = {
+                "filename": params["filename"],
+                "category": category,
+                "sub_category": sub_category,
+            }
 
+        return definition
+
+    async def async_get_device_file_url(
+        self,
+        file_url: str,
+        *,
+        label: str,
+    ) -> dict[str, Any] | list[Any]:
+        """Fetch and decode an app-provided history/map file URL."""
+        try:
+            async with self._session.get(file_url, timeout=20) as resp:
+                if resp.status != 200:
+                    body = await resp.text()
+                    raise AnthbotGenieApiError(
+                        f"{label} URL download failed ({resp.status}): {body[:300]}"
+                    )
+                raw_bytes = await resp.read()
+        except ClientError as err:
+            raise AnthbotGenieApiError(f"Network error: {err}") from err
+        except TimeoutError as err:
+            raise AnthbotGenieApiError("Request timed out") from err
+
+        definition = decode_device_definition(raw_bytes, label)
+        if not isinstance(definition, (dict, list)):
+            raise AnthbotGenieApiError(
+                f"{label} URL payload type is not JSON object/array"
+            )
+        if isinstance(definition, dict):
+            definition["_download_source"] = {"url": file_url[:180], "label": label}
         return definition
 
     async def async_get_device_area_definition(
@@ -944,11 +1107,32 @@ class AnthbotCloudApiClient:
     async def async_get_device_path_definition(
         self, serial_number: str
     ) -> dict[str, Any] | list[Any]:
-        """Fetch the mower path definition file if the cloud exposes it."""
-        return await self.async_get_device_json_file(
-            serial_number,
-            file_prefix="path",
-            sub_category="path",
+        """Fetch the mower history/path file if the cloud exposes it."""
+        attempts = (
+            ("path", "path", f"path_{serial_number}.txt", "device"),
+            ("his_path", "path", f"his_path_{serial_number}.txt", "device"),
+            ("history_path", "path", f"history_path_{serial_number}.txt", "device"),
+            ("record_path", "path", f"record_path_{serial_number}.txt", "device"),
+            ("history_path_info", "path", f"history_path_info_{serial_number}.txt", "device"),
+            ("path", "history_path_info", f"path_{serial_number}.txt", "device"),
+            ("history_path", "history_path_info", f"history_path_{serial_number}.txt", "device"),
+            ("record_path", "history_path_info", f"record_path_{serial_number}.txt", "device"),
+        )
+        errors: list[str] = []
+        for file_prefix, sub_category, filename, category in attempts:
+            try:
+                return await self.async_get_device_json_file(
+                    serial_number,
+                    file_prefix=file_prefix,
+                    sub_category=sub_category,
+                    filename=filename,
+                    category=category,
+                )
+            except AnthbotGenieApiError as err:
+                errors.append(f"{filename}/{sub_category}: {err}")
+        raise AnthbotGenieApiError(
+            "No app-style history path file could be downloaded: "
+            + " | ".join(errors[-4:])
         )
 
     async def async_get_device_presigned_region(self, serial_number: str) -> str | None:

@@ -27,6 +27,9 @@ robot on a top-down photograph of the garden.
 - optional aerial or drone photograph as the map background
 - custom zones and no-go areas
 - live and historical mowing trail
+- app-style cloud history-path download and decoding
+- mowing-session trail persistence across view changes and page reloads
+- optional configurable mowing-coverage layer
 - charger and robot icons
 - full-screen view, zoom, pan, rotation, and calibration controls
 - floating translucent control menu that keeps the garden map visible
@@ -46,6 +49,7 @@ can vary by mower model and firmware.
 custom_components/anthbot_genie_plus/   Home Assistant integration
 www/anthbot-map/                        Lovelace map card
 tools/anthbot_dump.py                   Optional diagnostic helper
+examples/                               Example YAML
 ```
 
 ## Installation
@@ -66,8 +70,9 @@ tools/anthbot_dump.py                   Optional diagnostic helper
 7. Open **Settings → Devices & services → Add integration**.
 8. Search for **Anthbot Genie Plus** and enter the Anthbot account details.
 
-HACS installs the integration. The frontend map files must currently be copied
-manually as described in the next step.
+HACS installs the integration and manages subsequent updates. The complete ZIP
+on the GitHub Releases page contains the integration, map card, example files,
+and documentation in one package.
 
 ### 2. Install the map card
 
@@ -92,7 +97,7 @@ The resulting main file must be:
 Add the Lovelace JavaScript resource:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=101
+/local/anthbot-map/anthbot-map-card.js?v=126
 ```
 
 Resource type: **JavaScript module**.
@@ -278,7 +283,7 @@ After updating the card files, increment the query string in the Lovelace
 resource URL to avoid browser caching, for example:
 
 ```text
-/local/anthbot-map/anthbot-map-card.js?v=101
+/local/anthbot-map/anthbot-map-card.js?v=126
 ```
 
 Then restart Home Assistant and hard-refresh the browser.
@@ -289,7 +294,7 @@ Then restart Home Assistant and hard-refresh the browser.
 
 - confirm the resource is a JavaScript module
 - confirm `/config/www/anthbot-map/anthbot-map-card.js` exists
-- open `/local/anthbot-map/anthbot-map-card.js?v=101` directly in the browser
+- open `/local/anthbot-map/anthbot-map-card.js?v=126` directly in the browser
 - hard-refresh with `Ctrl+Shift+R`
 
 ### Map or robot is missing

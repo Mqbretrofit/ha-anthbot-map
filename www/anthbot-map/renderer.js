@@ -1,4 +1,4 @@
-﻿import { createGeometry, getBoundaryPaths, getWorldBounds, getZonePoints, getZones, normalizePoints } from "./geometry.js?v=80";
+﻿import { createGeometry, getBoundaryPaths, getWorldBounds, getZonePoints, getZones } from "./geometry.js?v=80";
 
 const COLORS = Object.freeze({
   background: "#18202a",
@@ -11,6 +11,7 @@ const COLORS = Object.freeze({
   boundaryGlow: "rgba(168, 179, 255, 0.38)",
   mowedPath: "rgba(82, 94, 245, 0.62)",
   mowedPathStroke: "rgba(220, 226, 255, 0.72)",
+  mowedCoverage: "rgba(255, 235, 59, 0.28)",
   robot: "#ffcc33",
   robotStroke: "#1b1b1b",
 });
@@ -32,7 +33,12 @@ export class AnthbotMapRenderer {
     this.robotHeading = null;
     this.cloudHeading = null;
     this.liveMowedPath = [];
+    this.persistedMowedPath = [];
     this.lastTrailPoint = null;
+    this.mowedPathStorageKey = options.mowedPathStorageKey || null;
+    this.lastSavedMowedPathSignature = "";
+    this.currentMowedPathSessionId = null;
+    this.lastMowingState = false;
     this.dpr = 1;
     this.view = {
       panX: 0,
@@ -44,6 +50,7 @@ export class AnthbotMapRenderer {
     this.pointers = new Map();
     this.pinch = null;
     this.decodedBoundaryCalibration = options.decodedBoundaryCalibration || {};
+    this.restoreLiveMowedPath();
 
     this.onPointerDown = this.onPointerDown.bind(this);
     this.onPointerMove = this.onPointerMove.bind(this);
@@ -66,7 +73,12 @@ export class AnthbotMapRenderer {
   }
 
   setOptions(options = {}) {
+    const previousMowedPathStorageKey = this.mowedPathStorageKey;
     this.options = { ...this.options, ...options };
+    this.mowedPathStorageKey = this.options.mowedPathStorageKey || null;
+    if (this.mowedPathStorageKey !== previousMowedPathStorageKey) {
+      this.restoreLiveMowedPath();
+    }
     if (options.decodedBoundaryCalibration) {
       this.decodedBoundaryCalibration = options.decodedBoundaryCalibration;
     }
@@ -80,6 +92,7 @@ export class AnthbotMapRenderer {
 
   setState(state = {}) {
     this.state = state;
+    this.updateMowedPathSession(state);
     this.updateLiveMowedPath(state);
     this.loadImage(this.options.image);
     this.loadRobotImage(this.options.robotImage);
@@ -198,14 +211,18 @@ export class AnthbotMapRenderer {
       return;
     }
 
-    const pathSource = String(this.options.mowedPathSource || "live").toLowerCase();
-    const points = pathSource === "cloud" ? extractPathPoints(this.state.path) : [];
-    const trail = points.length >= 2 ? points : this.liveMowedPath;
-    if (!trail || trail.length < 1) {
+    const pathSource = String(this.options.mowedPathSource || "auto").toLowerCase();
+    const cloudTrail = pathSource === "live" ? [] : extractCloudMowedPathPoints(this.state);
+    const baseTrail = cloudTrail.length >= 2 ? cloudTrail : this.persistedMowedPath;
+    const liveTrail = this.liveMowedPath;
+    const hasCloudTrail = pathSource !== "live" && baseTrail?.length >= 1;
+    const hasLiveTrail = liveTrail?.length >= 1;
+    if (!hasCloudTrail && !hasLiveTrail) {
       return;
     }
 
-    const screenPoints = trail.map((point) => this.robotPositionToScreen(geometry, point));
+    const rect = this.canvas.getBoundingClientRect();
+    const canvasDiagonal = Math.hypot(rect.width || 0, rect.height || 0);
     const zoomWidthFactor = Math.sqrt(Math.max(0.25, Number(this.view.zoom) || 1));
     const width = clamp(
       (Number(this.options.mowedPathWidth) || 7) * zoomWidthFactor,
@@ -217,34 +234,114 @@ export class AnthbotMapRenderer {
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.globalCompositeOperation = "source-over";
-    ctx.strokeStyle = this.options.mowedPathColor || COLORS.mowedPath;
-    ctx.lineWidth = width;
 
-    if (screenPoints.length === 1) {
-      ctx.fillStyle = this.options.mowedPathColor || COLORS.mowedPath;
-      ctx.beginPath();
-      ctx.arc(screenPoints[0].x, screenPoints[0].y, width / 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+    if (hasCloudTrail) {
+      this.drawMowedTrailLayer(ctx, geometry, this.mowedPathDisplayTrail(baseTrail, true), {
+        width,
+        canvasDiagonal,
+        showCoverage: this.options.showMowedCoverage !== false,
+      });
+    }
+
+    if (hasLiveTrail) {
+      this.drawMowedTrailLayer(ctx, geometry, liveTrail, {
+        width,
+        canvasDiagonal,
+        showCoverage: false,
+      });
+    }
+    ctx.restore();
+  }
+
+  drawMowedTrailLayer(ctx, geometry, trail, options = {}) {
+    const width = Number(options.width) || 7;
+    const segments = buildMowedPathSegments(
+      trail,
+      (point) => this.robotPositionToScreen(geometry, point),
+      Number(options.canvasDiagonal) || 800,
+    );
+    if (!segments.length) {
       return;
     }
 
-    ctx.beginPath();
-    ctx.moveTo(screenPoints[0].x, screenPoints[0].y);
-    for (const point of screenPoints.slice(1)) {
-      ctx.lineTo(point.x, point.y);
+    if (options.showCoverage) {
+      const coverageWidth = this.mowedCoverageScreenWidth(geometry, trail);
+      if (coverageWidth > width) {
+        ctx.strokeStyle = this.options.mowedCoverageColor || COLORS.mowedCoverage;
+        ctx.lineWidth = coverageWidth;
+        for (const segment of segments) {
+          if (segment.length < 2) continue;
+          drawScreenSegment(ctx, segment);
+          ctx.stroke();
+        }
+      }
     }
-    ctx.stroke();
+
+    ctx.strokeStyle = this.options.mowedPathColor || COLORS.mowedPath;
+    ctx.lineWidth = width;
+    if (segments.length === 1 && segments[0].length === 1) {
+      ctx.fillStyle = this.options.mowedPathColor || COLORS.mowedPath;
+      ctx.beginPath();
+      ctx.arc(segments[0][0].x, segments[0][0].y, width / 2, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+    for (const segment of segments) {
+      if (segment.length < 2) continue;
+      drawScreenSegment(ctx, segment);
+      ctx.stroke();
+    }
 
     ctx.strokeStyle = COLORS.mowedPathStroke;
     ctx.lineWidth = Math.max(1.5, width * 0.08);
-    ctx.beginPath();
-    ctx.moveTo(screenPoints[0].x, screenPoints[0].y);
-    for (const point of screenPoints.slice(1)) {
-      ctx.lineTo(point.x, point.y);
+    for (const segment of segments) {
+      if (segment.length < 2) continue;
+      drawScreenSegment(ctx, segment);
+      ctx.stroke();
     }
-    ctx.stroke();
-    ctx.restore();
+  }
+
+  mowedCoverageScreenWidth(geometry, trail) {
+    const coverageMm = Number(
+      this.options.mowedCoverageWidth ??
+      this.options.mowed_coverage_width ??
+      this.options.mowerCutWidth ??
+      this.options.mower_cut_width ??
+      360,
+    );
+    if (!Number.isFinite(coverageMm) || coverageMm <= 0) {
+      return 0;
+    }
+
+    const anchor = (trail || []).find((point) =>
+      Number.isFinite(Number(point?.x)) && Number.isFinite(Number(point?.y)),
+    ) || this.state.pose;
+    if (!anchor || !Number.isFinite(Number(anchor.x)) || !Number.isFinite(Number(anchor.y))) {
+      return clamp(coverageMm / 35, 10, 48);
+    }
+
+    const a = this.robotPositionToScreen(geometry, anchor);
+    const b = this.robotPositionToScreen(geometry, {
+      x: Number(anchor.x) + coverageMm,
+      y: Number(anchor.y),
+    });
+    return clamp(Math.hypot(b.x - a.x, b.y - a.y), 10, 64);
+  }
+
+  mowedPathDisplayTrail(trail, useCloudScale = false) {
+    const scale = Number(
+      this.options.mowedPathDisplayScale ??
+      this.options.mowed_path_display_scale ??
+      (useCloudScale && Number(this.state?.path_coordinate_scale) === 1 ? 10 : 1),
+    );
+    if (!Number.isFinite(scale) || scale === 1) {
+      return trail;
+    }
+    return (trail || []).map((point) => ({
+      ...point,
+      x: Number(point.x) * scale,
+      y: Number(point.y) * scale,
+    }));
   }
 
   drawBoundary(ctx, geometry, paths) {
@@ -617,13 +714,10 @@ export class AnthbotMapRenderer {
     ctx.translate(point.x, point.y);
     ctx.rotate(yaw);
     if (this.robotImage) {
-      const configuredSize = Number(this.options.robotSize);
-      const mapRatio = Number(this.options.robotMapRatio) || 0.055;
-      const baseSize = Number.isFinite(configuredSize) && configuredSize > 0
-        ? configuredSize * (Number(this.view.zoom) || 1)
-        : geometry.map.width * mapRatio;
       const size = clamp(
-        baseSize * (Number(robotCalibration.scaleX) || 1),
+        (Number(this.options.robotSize) || 42) *
+          (Number(robotCalibration.scaleX) || 1) *
+          (Number(this.view.zoom) || 1),
         8,
         260,
       );
@@ -642,11 +736,7 @@ export class AnthbotMapRenderer {
       return;
     }
 
-    const radius = clamp(
-      geometry.map.width * 0.012,
-      4,
-      64,
-    );
+    const radius = clamp(9 * (Number(this.view.zoom) || 1), 4, 64);
     ctx.fillStyle = COLORS.robot;
     ctx.strokeStyle = COLORS.robotStroke;
     ctx.lineWidth = 2;
@@ -703,9 +793,14 @@ export class AnthbotMapRenderer {
     }
 
     const point = { x: Number(pose.x), y: Number(pose.y) };
+    if (!isLiveMowingState(state) && !this.shouldTrackLiveMovementFallback(state, point)) {
+      return;
+    }
+
     if (!this.lastTrailPoint) {
       this.liveMowedPath.push(point);
       this.lastTrailPoint = point;
+      this.saveLiveMowedPath();
       return;
     }
 
@@ -721,6 +816,196 @@ export class AnthbotMapRenderer {
     if (this.liveMowedPath.length > 3000) {
       this.liveMowedPath.splice(0, this.liveMowedPath.length - 3000);
     }
+    this.saveLiveMowedPath();
+  }
+
+  shouldTrackLiveMovementFallback(state = {}, point) {
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+      return false;
+    }
+    if (
+      isDockingOrChargingStateValue(state?.mower_status) ||
+      isDockingOrChargingStateValue(state?.robot_status_raw) ||
+      isDockingOrChargingStateValue(state?.robot_sta)
+    ) {
+      return false;
+    }
+    if (state?.history_path_live_refresh === true) {
+      return true;
+    }
+    if (state?.path_time || state?.path_id || Number(state?.path_point_count) > 0) {
+      return true;
+    }
+    if (!this.lastTrailPoint) {
+      return false;
+    }
+    return Math.hypot(point.x - this.lastTrailPoint.x, point.y - this.lastTrailPoint.y) >= 1;
+  }
+
+  restoreLiveMowedPath() {
+    this.persistedMowedPath = [];
+    this.lastTrailPoint = null;
+    const storageKey = this.effectiveMowedPathStorageKey();
+    if (!storageKey) {
+      return;
+    }
+
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(storageKey) || "null");
+      const points = normalizePathPoints(Array.isArray(stored) ? stored : stored?.points);
+      if (!points.length) {
+        return;
+      }
+      this.persistedMowedPath = points.slice(-5000);
+      this.lastTrailPoint = this.persistedMowedPath[this.persistedMowedPath.length - 1] || null;
+    } catch (error) {
+      console.warn("Anthbot mowed path restore failed", error);
+    }
+  }
+
+  saveLiveMowedPath() {
+    this.rememberMowedPath(
+      mergeCloudAndLivePaths(this.persistedMowedPath, this.liveMowedPath),
+    );
+  }
+
+  rememberMowedPath(points) {
+    const storageKey = this.effectiveMowedPathStorageKey();
+    if (!storageKey) {
+      return;
+    }
+    const normalized = normalizePathPoints(points).slice(-5000);
+    if (!normalized.length) {
+      return;
+    }
+    const last = normalized[normalized.length - 1];
+    const signature = `${normalized.length}:${Math.round(Number(last.x) * 10)}:${Math.round(Number(last.y) * 10)}`;
+    if (signature === this.lastSavedMowedPathSignature) {
+      return;
+    }
+    this.persistedMowedPath = normalized;
+    this.lastSavedMowedPathSignature = signature;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify({
+        savedAt: Date.now(),
+        sessionId: this.currentMowedPathSessionId,
+        points: normalized,
+      }));
+    } catch (error) {
+      console.warn("Anthbot mowed path save failed", error);
+    }
+  }
+
+  effectiveMowedPathStorageKey() {
+    if (!this.mowedPathStorageKey) {
+      return null;
+    }
+    return this.currentMowedPathSessionId
+      ? `${this.mowedPathStorageKey}:${this.currentMowedPathSessionId}`
+      : this.mowedPathStorageKey;
+  }
+
+  mowedPathSessionMetaKey() {
+    return this.mowedPathStorageKey ? `${this.mowedPathStorageKey}:session` : null;
+  }
+
+  readMowedPathSessionMeta() {
+    const storageKey = this.mowedPathSessionMetaKey();
+    if (!storageKey || typeof window === "undefined" || !window.localStorage) {
+      return {};
+    }
+    try {
+      const value = JSON.parse(window.localStorage.getItem(storageKey) || "{}");
+      return value && typeof value === "object" ? value : {};
+    } catch (error) {
+      console.warn("Anthbot mowed path session restore failed", error);
+      return {};
+    }
+  }
+
+  writeMowedPathSessionMeta(mowing) {
+    const storageKey = this.mowedPathSessionMetaKey();
+    if (!storageKey || typeof window === "undefined" || !window.localStorage) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify({
+        savedAt: Date.now(),
+        mowing: Boolean(mowing),
+        sessionId: this.currentMowedPathSessionId,
+      }));
+    } catch (error) {
+      console.warn("Anthbot mowed path session save failed", error);
+    }
+  }
+
+  findLatestStoredLiveSession() {
+    if (!this.mowedPathStorageKey || typeof window === "undefined" || !window.localStorage) {
+      return null;
+    }
+    const prefix = `${this.mowedPathStorageKey}:live:`;
+    let latest = null;
+    try {
+      for (let index = 0; index < window.localStorage.length; index += 1) {
+        const key = window.localStorage.key(index);
+        if (!key?.startsWith(prefix)) {
+          continue;
+        }
+        const stored = JSON.parse(window.localStorage.getItem(key) || "{}");
+        const savedAt = Number(stored?.savedAt);
+        const points = Array.isArray(stored?.points) ? stored.points.length : 0;
+        if (!Number.isFinite(savedAt) || points < 2) {
+          continue;
+        }
+        if (!latest || savedAt > latest.savedAt) {
+          latest = { savedAt, sessionId: key.slice(this.mowedPathStorageKey.length + 1) };
+        }
+      }
+    } catch (error) {
+      console.warn("Anthbot latest mowed path lookup failed", error);
+    }
+    if (!latest || Date.now() - latest.savedAt > 24 * 60 * 60 * 1000) {
+      return null;
+    }
+    return latest.sessionId;
+  }
+
+  updateMowedPathSession(state = {}) {
+    const mowing = isLiveMowingState(state);
+    const cloudSession = mowedPathSessionId(state);
+    const storedSession = this.readMowedPathSessionMeta();
+    let nextSession = cloudSession;
+
+    if (!nextSession && mowing) {
+      const storedLiveSession =
+        storedSession.mowing === true &&
+        typeof storedSession.sessionId === "string" &&
+        storedSession.sessionId.startsWith("live:")
+          ? storedSession.sessionId
+          : null;
+      const latestLiveSession = storedSession.sessionId ? null : this.findLatestStoredLiveSession();
+      nextSession =
+        this.currentMowedPathSessionId?.startsWith("live:")
+          ? this.currentMowedPathSessionId
+          : storedLiveSession || latestLiveSession || `live:${Date.now()}`;
+    }
+
+    if (!nextSession && !mowing) {
+      nextSession =
+        this.currentMowedPathSessionId ||
+        (typeof storedSession.sessionId === "string" ? storedSession.sessionId : null);
+    }
+
+    if (nextSession && nextSession !== this.currentMowedPathSessionId) {
+      this.currentMowedPathSessionId = nextSession;
+      this.liveMowedPath = [];
+      this.persistedMowedPath = [];
+      this.lastTrailPoint = null;
+      this.lastSavedMowedPathSignature = "";
+      this.restoreLiveMowedPath();
+    }
+    this.lastMowingState = mowing;
+    this.writeMowedPathSessionMeta(mowing);
   }
 
   movementHeading(geometry) {
@@ -787,22 +1072,7 @@ export class AnthbotMapRenderer {
   }
 
   isMowingState() {
-    const status = String(this.state.mower_status || "").toLowerCase();
-    return [
-      "mowing",
-      "working",
-      "cutting",
-      "edge_cutting",
-      "zone_mowing",
-      "zonemowing",
-      "nyiras",
-      "nyĂ­rĂˇs",
-      "nyir",
-      "nyĂ­r",
-      "munka",
-      "vagas",
-      "vĂˇgĂˇs",
-    ].some((item) => status.includes(item));
+    return isLiveMowingState(this.state);
   }
 
   onPointerDown(event) {
@@ -946,6 +1216,107 @@ function smoothAngle(current, next, amount) {
   return current + normalizeAngle(next - current) * amount;
 }
 
+function isMowingStateValue(value) {
+  const status = String(value || "").toLowerCase().replace(/[\s-]+/g, "_");
+  return [
+    "globalmowing",
+    "global_mowing",
+    "zonemowing",
+    "zone_mowing",
+    "pointmowing",
+    "point_mowing",
+    "bordermowing",
+    "border_mowing",
+    "regionmowing",
+    "region_mowing",
+    "nestmowing",
+    "nest_mowing",
+    "mowing",
+    "working",
+    "cutting",
+    "edge_cutting",
+    "gototarget",
+    "goto_target",
+    "remotectrl",
+    "remote_ctrl",
+    "nyiras",
+    "nyir",
+    "munka",
+    "vagas",
+  ].some((item) => status.includes(item));
+}
+
+function isDockingOrChargingStateValue(value) {
+  const status = String(value || "").toLowerCase().replace(/[\s-]+/g, "_");
+  return [
+    "charge",
+    "charging",
+    "dock",
+    "docking",
+    "go_home",
+    "gohome",
+    "return",
+    "returning",
+    "back_to_dock",
+    "backtodock",
+    "toltes",
+    "dokkol",
+  ].some((item) => status.includes(item));
+}
+
+function isLiveMowingState(state = {}) {
+  return (
+    state?.history_path_live_refresh === true ||
+    isMowingStateValue(state?.mower_status) ||
+    isMowingStateValue(state?.robot_status_raw) ||
+    isMowingStateValue(state?.robot_sta)
+  );
+}
+
+function mowedPathSessionId(state = {}) {
+  const definition = state.path_definition || state.pathDefinition || {};
+  const pathId = firstStableToken(state.path_id, state.pathId, definition.path_id, definition.pathId);
+  if (pathId) {
+    return `path:${pathId}`;
+  }
+
+  const pathTime = firstStableToken(
+    state.path_time,
+    state.pathTime,
+    definition.path_time,
+    definition.pathTime,
+  );
+  if (pathTime) {
+    return `time:${pathTime}`;
+  }
+
+  const start = firstStableToken(state.path_start, state.pathStart, definition.start);
+  const pointCount = firstStableToken(
+    state.path_point_count,
+    state.pathPointCount,
+    definition.point_count,
+    definition.pointCount,
+  );
+  if (start && pointCount) {
+    return `start:${start}:${pointCount}`;
+  }
+
+  return null;
+}
+
+function firstStableToken(...values) {
+  for (const value of values) {
+    if (value === undefined || value === null || value === "") {
+      continue;
+    }
+    const token = String(value).trim();
+    if (token) {
+      return token.replace(/[^a-zA-Z0-9_.:-]/g, "_").slice(0, 120);
+    }
+  }
+  return null;
+}
+
 function drawPolyline(ctx, points, close = false) {
   if (!points.length) {
     return;
@@ -958,6 +1329,17 @@ function drawPolyline(ctx, points, close = false) {
   }
   if (close) {
     ctx.closePath();
+  }
+}
+
+function drawScreenSegment(ctx, segment) {
+  if (!segment?.length) {
+    return;
+  }
+  ctx.beginPath();
+  ctx.moveTo(segment[0].x, segment[0].y);
+  for (const point of segment.slice(1)) {
+    ctx.lineTo(point.x, point.y);
   }
 }
 
@@ -997,7 +1379,7 @@ function drawImageToScreenRect(ctx, source, topLeft, topRight, bottomLeft, optio
 }
 
 function extractPathPoints(value) {
-  const direct = normalizePoints(value);
+  const direct = normalizePathPoints(value);
   if (direct.length) {
     return direct;
   }
@@ -1008,7 +1390,7 @@ function extractPathPoints(value) {
 
   if (value && typeof value === "object") {
     if (Number.isFinite(Number(value.x)) && Number.isFinite(Number(value.y))) {
-      return [{ x: Number(value.x), y: Number(value.y) }];
+      return [normalizePathPoint(value)];
     }
 
     for (const key of ["points", "path", "track", "tracks", "trajectory", "mowed_path", "mowedPath"]) {
@@ -1020,6 +1402,130 @@ function extractPathPoints(value) {
   }
 
   return [];
+}
+
+function normalizePathPoints(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(normalizePathPoint).filter(Boolean);
+}
+
+function normalizePathPoint(value) {
+  if (Array.isArray(value) && value.length >= 2) {
+    return { x: Number(value[0]), y: Number(value[1]) };
+  }
+  if (!value || typeof value !== "object") return null;
+  const point = {
+    x: Number(value.x ?? value.lng ?? value.lon),
+    y: Number(value.y ?? value.lat),
+  };
+  if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
+  if (value.type !== undefined) point.type = Number(value.type);
+  if (value.clean_time !== undefined) point.clean_time = Number(value.clean_time);
+  if (value.break_before === true) point.break_before = true;
+  return point;
+}
+
+function buildMowedPathSegments(points, toScreen, canvasDiagonal) {
+  const segments = [];
+  let segment = [];
+  let previous = null;
+  const jumpLimit = Math.max(45, Math.min(180, (Number(canvasDiagonal) || 800) * 0.12));
+
+  for (const point of points || []) {
+    const pointType = Number(point?.type);
+    const cleanTime = Number(point?.clean_time ?? point?.cleanTime ?? point?.cleanedCode);
+    const isAppMowedPoint =
+      point?.type === undefined ||
+      [1, 2, 5, 8].includes(pointType) ||
+      (Number.isFinite(cleanTime) && cleanTime > 0);
+    if (!isAppMowedPoint) {
+      if (segment.length) segments.push(segment);
+      segment = [];
+      previous = null;
+      continue;
+    }
+    const screen = toScreen(point);
+    if (!screen || !Number.isFinite(screen.x) || !Number.isFinite(screen.y)) continue;
+    const jumped = previous && Math.hypot(screen.x - previous.x, screen.y - previous.y) > jumpLimit;
+    if (point.break_before || jumped) {
+      if (segment.length) segments.push(segment);
+      segment = [];
+    }
+    segment.push(screen);
+    previous = screen;
+  }
+  if (segment.length) segments.push(segment);
+  return segments;
+}
+
+function extractCloudMowedPathPoints(state = {}) {
+  const candidates = [
+    state.mowed_path,
+    state.mowedPath,
+    state.cloud_path,
+    state.cloudPath,
+    state.history_path_info,
+    state.historyPathInfo,
+    state.his_path,
+    state.hisPath,
+    state.HisPath,
+    state.record_path,
+    state.recordPath,
+    state.RecordPath,
+    state.path_definition,
+    state.pathDefinition,
+    state.path_binary_paths,
+    state.pathBinaryPaths,
+    state.mowing_path,
+    state.mowingPath,
+    state.track,
+    state.tracks,
+    state.trajectory,
+    state.path,
+  ];
+
+  for (const candidate of candidates) {
+    const points = extractPathPoints(candidate);
+    if (points.length >= 2) {
+      return points;
+    }
+  }
+
+  return [];
+}
+
+function mergeCloudAndLivePaths(cloudPath, livePath) {
+  if (!cloudPath?.length) {
+    return livePath || [];
+  }
+  if (!livePath?.length) {
+    return cloudPath;
+  }
+
+  const merged = [...cloudPath];
+  let startIndex = 0;
+  for (let index = livePath.length - 1; index >= 0; index -= 1) {
+    if (pointDistance(merged[merged.length - 1], livePath[index]) < 1) {
+      startIndex = index + 1;
+      break;
+    }
+  }
+
+  let firstLive = startIndex === 0;
+  for (const point of livePath.slice(startIndex)) {
+    if (pointDistance(merged[merged.length - 1], point) >= 1) {
+      merged.push(firstLive ? { ...point, break_before: true } : point);
+      firstLive = false;
+    }
+  }
+  return merged;
+}
+
+function pointDistance(a, b) {
+  if (!a || !b) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return Math.hypot(Number(a.x) - Number(b.x), Number(a.y) - Number(b.y));
 }
 
 function rasterColor(value) {

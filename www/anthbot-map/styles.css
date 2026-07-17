@@ -540,13 +540,14 @@ input[type="range"] {
 }
 
 .calibration {
-  background: var(--anthbot-card-background);
-  border-top: 1px solid var(--divider-color, #d9e2ec);
+  background: rgba(8, 18, 28, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f8fafc;
   padding: 10px 14px 14px;
 }
 
 summary {
-  color: var(--primary-text-color, #1f2933);
+  color: #f8fafc;
   cursor: pointer;
   font-weight: 700;
   margin-bottom: 10px;
@@ -566,7 +567,7 @@ summary {
 }
 
 .calibration-title {
-  color: var(--primary-text-color, #1f2933);
+  color: #f8fafc;
   font-size: 14px;
   font-weight: 700;
   margin: 12px 0 8px;
