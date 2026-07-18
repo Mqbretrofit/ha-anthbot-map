@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.55 / map card v127 — 2026-07-18
+
+### Added
+
+- Felhőkapcsolati és robot-online állapotjelzés az Anthbot Map Card fejlécében és térképnézetében.
+- Parancsvisszajelzés indítás, zónanyírás, szegélynyírás, leállítás és töltőre küldés után.
+- Külön jelzés a parancs elküldéséről, a robot visszaigazolásáról és a visszaigazolási időtúllépésről.
+
+### Changed
+
+- Aktív nyírás közben 5 másodpercenként, nyugalmi állapotban 60 másodpercenként kér teljes felhőállapotot.
+- A kártya a Home Assistant entitásfrissítése után automatikusan újraolvassa és újrarajzolja a robotot és a lenyírt útvonalat.
+- A Lovelace-erőforrás gyorsítótár-verziója `v127`.
+
+### Fixed
+
+- Az Anthbot alkalmazást nem kell megnyitni ahhoz, hogy a Home Assistant rendszeresen megpróbálja frissíteni a robot állapotát.
+- A térkép és a lenyírt felület nem csak kézi oldalfrissítés után frissül.
+
 ## 1.0.54 / map card v126 — 2026-07-17
 
 ### Added

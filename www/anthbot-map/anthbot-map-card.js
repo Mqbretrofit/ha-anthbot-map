@@ -1,4 +1,4 @@
-import { AnthbotMapRenderer } from "./renderer.js?v=126";
+import { AnthbotMapRenderer } from "./renderer.js?v=127";
 import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=101";
 import {
   adjustCalibration,
@@ -65,6 +65,7 @@ class AnthbotMapCard extends HTMLElement {
     this.transparentBackground = false;
     this.glassBackground = false;
     this.optimisticSettings = new Map();
+    this.commandConfirmationToken = 0;
     this.selectedLanguage = "auto";
     this.floatingMenuOpen = false;
   }
@@ -153,7 +154,7 @@ class AnthbotMapCard extends HTMLElement {
       .join(" ");
     root.innerHTML = `
       <ha-card class="${cardClasses}">
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=126")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=127")}">
         <style>
           .anthbot-menu-toggle { position:absolute; z-index:40; min-height:46px; padding:9px 15px; border:1px solid rgba(255,255,255,.38); border-radius:999px; background:rgba(10,18,26,.48); color:#fff; backdrop-filter:blur(10px); box-shadow:0 8px 28px rgba(0,0,0,.26); font:inherit; font-weight:800; cursor:pointer; }
           .anthbot-menu-toggle { right:14px; bottom:14px; }
@@ -164,6 +165,10 @@ class AnthbotMapCard extends HTMLElement {
           .anthbot-glass-panel .app-shell, .anthbot-glass-panel .app-panel { background:transparent !important; border:0 !important; }
           .anthbot-glass-panel .top-menu { background:rgba(7,15,23,.30) !important; border:1px solid rgba(255,255,255,.10); border-radius:14px; margin:2px 10px 8px; }
           .anthbot-glass-panel .panel-tabs { padding-inline:10px; }
+          .cloud-status { font-size:12px; font-weight:800; color:#aeb7c2; }
+          .cloud-status[data-state="online"] { color:#55e58a; }
+          .cloud-status[data-state="waiting"] { color:#ffd45c; }
+          .cloud-status[data-state="offline"] { color:#ff6b6b; }
           .anthbot-glass-panel .command-dock { display:block !important; position:static !important; inset:auto !important; transform:none !important; margin:8px 10px 12px; background:rgba(6,14,22,.24) !important; }
           @media (max-width:720px) { .anthbot-glass-panel { left:8px; right:8px; bottom:66px; width:auto; max-height:72%; } .anthbot-menu-toggle { right:10px; bottom:10px; } }
         </style>
@@ -180,6 +185,7 @@ class AnthbotMapCard extends HTMLElement {
               <div class="status-copy">
                 <span class="status-label">${this.t("status")}</span>
                 <strong data-role="mower-status">-</strong>
+                <span class="cloud-status" data-role="cloud-status">☁ Ellenőrzés…</span>
               </div>
             </div>
           </div>
@@ -210,6 +216,7 @@ class AnthbotMapCard extends HTMLElement {
             <span data-role="zone-count">${this.t("zones")}: -</span>
             <span data-role="pose">${this.t("position")}: -</span>
             <span data-role="heading">${this.t("heading")}: -</span>
+            <span class="cloud-status" data-role="map-cloud-status">☁ Ellenőrzés…</span>
           </div>
           <div class="map-overlay command-dock">
             <div class="zone-strip" data-role="zone-controls"></div>
@@ -454,6 +461,7 @@ class AnthbotMapCard extends HTMLElement {
   }
 
   updateMapBadges(attributes) {
+    this.updateCloudStatus(attributes);
     const customAreas = Array.isArray(attributes.area_definition?.custom_areas)
       ? attributes.area_definition.custom_areas.length
       : 0;
@@ -874,6 +882,40 @@ class AnthbotMapCard extends HTMLElement {
       console.warn("Anthbot map refresh failed", error);
     } finally {
       this.refreshInFlight = false;
+      this.syncEntityAndRenderer();
+      window.setTimeout(() => this.syncEntityAndRenderer(), 750);
+      window.setTimeout(() => this.syncEntityAndRenderer(), 1800);
+    }
+  }
+
+  updateCloudStatus(attributes = {}) {
+    const cloudConnected = attributes.cloud_connected;
+    const robotOnline = attributes.robot_online;
+    const state = cloudConnected === false ? "offline" : robotOnline === true ? "online" : "waiting";
+    const text = cloudConnected === false
+      ? "☁ Felhő: nincs kapcsolat"
+      : robotOnline === true
+        ? "☁ Felhő: aktív · Robot: online"
+        : cloudConnected === true
+          ? "☁ Felhő: aktív · Robot: nem válaszol"
+          : "☁ Felhő: ellenőrzés…";
+    for (const role of ["cloud-status", "map-cloud-status"]) {
+      const badge = this.shadowRoot?.querySelector(`[data-role="${role}"]`);
+      if (badge) {
+        badge.textContent = text;
+        badge.dataset.state = state;
+      }
+    }
+  }
+
+  syncEntityAndRenderer() {
+    if (!this._hass || !this.config?.entity) {
+      return;
+    }
+    const latestEntity = this._hass.states[this.config.entity];
+    if (latestEntity) {
+      this.entity = latestEntity;
+      this.updateRenderer();
     }
   }
 
@@ -920,9 +962,68 @@ class AnthbotMapCard extends HTMLElement {
         ...data,
         entity_id: this.config.entity,
       });
+      this.notify(`${this.commandLabel(service)}: parancs elküldve, visszaigazolásra vár.`);
+      this.scheduleRefresh(200);
+      void this.waitForCommandConfirmation(service);
     } catch (error) {
       this.notify(`A muvelet hibat jelzett: ${service}`);
       throw error;
+    }
+  }
+
+  commandLabel(service) {
+    return ({
+      start_full_mow: "Indítás",
+      start_zone_mow: "Zónanyírás",
+      start_outer_edge_mow: "Külső szegélynyírás",
+      start_dock_edge_mow: "Töltő körüli nyírás",
+      stop_mow: "Leállítás",
+      return_to_dock: "Töltőre küldés",
+      connect_cloud: "Felhőkapcsolat",
+    })[service] || service;
+  }
+
+  commandStatusValues() {
+    const entity = this._hass?.states?.[this.config?.entity];
+    const attributes = entity?.attributes || {};
+    const robotState = attributes.robot_sta;
+    return [
+      this.getRelatedEntity("status")?.state,
+      attributes.mower_status,
+      attributes.robot_status_raw,
+      typeof robotState === "object" ? robotState?.value : robotState,
+      entity?.state,
+    ].map((value) => String(value || "").toLowerCase().replace(/[\s_-]+/g, ""));
+  }
+
+  commandIsConfirmed(service) {
+    const expected = ({
+      start_full_mow: ["mowing", "globalmowing", "working", "cutting"],
+      start_zone_mow: ["mowing", "zonemowing", "regionmowing", "working", "cutting"],
+      start_outer_edge_mow: ["mowing", "bordermowing", "edgecutting", "working"],
+      start_dock_edge_mow: ["mowing", "nestmowing", "working"],
+      stop_mow: ["paused", "pause", "standby", "idle"],
+      return_to_dock: ["returning", "backtodock", "docking", "charging", "charge"],
+    })[service];
+    return Array.isArray(expected) && this.commandStatusValues().some((status) =>
+      expected.some((value) => status.includes(value)),
+    );
+  }
+
+  async waitForCommandConfirmation(service) {
+    if (service === "connect_cloud") return;
+    const token = ++this.commandConfirmationToken;
+    const deadline = Date.now() + 20000;
+    while (token === this.commandConfirmationToken && Date.now() < deadline) {
+      await new Promise((resolve) => window.setTimeout(resolve, 1000));
+      await this.refreshEntities();
+      if (this.commandIsConfirmed(service)) {
+        this.notify(`${this.commandLabel(service)}: a robot visszaigazolta.`);
+        return;
+      }
+    }
+    if (token === this.commandConfirmationToken) {
+      this.notify(`${this.commandLabel(service)}: a felhő elfogadta, de a robot nem igazolta vissza.`);
     }
   }
 

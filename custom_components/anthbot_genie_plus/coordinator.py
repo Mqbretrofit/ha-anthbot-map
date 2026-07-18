@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 import time
 from typing import Any
@@ -21,6 +21,7 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 _LIVE_HISTORY_REFRESH_SECONDS = 5.0
+_IDLE_PROPERTY_REFRESH_SECONDS = 60.0
 
 _LIVE_STATUS_VALUES = {
     "globalmowing",
@@ -79,6 +80,31 @@ def _normalize_status(value: str) -> str:
     return value.lower().replace("-", "").replace("_", "").replace(" ", "")
 
 
+def _is_robot_shadow_fresh(data: dict[str, Any], max_age_seconds: int = 30) -> bool:
+    """Return whether the mower shadow contains a recent device timestamp."""
+    value = data.get("timestamp")
+    timestamp: float | None = None
+    if isinstance(value, (int, float)):
+        timestamp = float(value)
+    elif isinstance(value, str):
+        raw = value.strip()
+        if raw.isdigit():
+            if len(raw) == 14:
+                try:
+                    timestamp = datetime.strptime(raw, "%Y%m%d%H%M%S").replace(
+                        tzinfo=timezone.utc
+                    ).timestamp()
+                except ValueError:
+                    timestamp = None
+            else:
+                timestamp = float(raw)
+    if timestamp is None:
+        return False
+    if timestamp > 10_000_000_000:
+        timestamp /= 1000
+    return 0 <= datetime.now(timezone.utc).timestamp() - timestamp <= max_age_seconds
+
+
 class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Coordinator to fetch and cache Anthbot shadow state."""
 
@@ -113,6 +139,7 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_history_path_request: str | None = None
         self._last_history_path_request_monotonic = 0.0
         self._last_path_download_monotonic = 0.0
+        self._last_property_request_monotonic = 0.0
         self._consecutive_cloud_failures = 0
 
     @property
@@ -124,14 +151,28 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Fetch the latest state from the cloud endpoint."""
         try:
             property_state = await self.client.async_get_shadow_reported_state()
-            if _is_live_position_state(property_state):
+            now = time.monotonic()
+            is_live_hint = _is_live_position_state(
+                property_state
+            ) or _is_live_position_state(self.reported_state)
+            property_refresh_seconds = (
+                _LIVE_HISTORY_REFRESH_SECONDS
+                if is_live_hint
+                else _IDLE_PROPERTY_REFRESH_SECONDS
+            )
+            if (
+                self._last_property_request_monotonic == 0.0
+                or now - self._last_property_request_monotonic
+                >= property_refresh_seconds
+            ):
                 try:
                     await self.client.async_request_all_properties()
+                    self._last_property_request_monotonic = time.monotonic()
                     await asyncio.sleep(0.5)
                     property_state = await self.client.async_get_shadow_reported_state()
                 except AnthbotGenieApiError as err:
                     _LOGGER.debug(
-                        "Live Anthbot property request failed for %s: %s",
+                        "Anthbot property refresh request failed for %s: %s",
                         self.client.serial_number,
                         err,
                     )
@@ -263,6 +304,9 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             merged_state["_history_path_last_download_monotonic"] = self._last_path_download_monotonic
             merged_state["_map_definition_error"] = self._map_definition_error
             merged_state["_path_definition_error"] = self._path_definition_error
+            merged_state["_cloud_connected"] = True
+            merged_state["_cloud_last_success"] = datetime.now(timezone.utc).isoformat()
+            merged_state["_robot_online"] = _is_robot_shadow_fresh(property_state)
             self._consecutive_cloud_failures = 0
             return merged_state
         except AnthbotGenieApiError as err:
@@ -274,7 +318,10 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     self._consecutive_cloud_failures,
                     err,
                 )
-                return self.reported_state
+                stale_state = dict(self.reported_state)
+                stale_state["_cloud_connected"] = False
+                stale_state["_cloud_error"] = str(err)
+                return stale_state
             raise UpdateFailed(str(err)) from err
 
     async def _async_request_history_path(self, path_time: str | None, *, force: bool = False) -> None:
