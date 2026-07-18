@@ -53,6 +53,8 @@ from .coordinator import AnthbotGenieDataUpdateCoordinator
 from .commands import async_start_mowing
 from .zones import auto_zones, manual_zones
 
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
 PLATFORMS = [
     "sensor",
     "binary_sensor",
