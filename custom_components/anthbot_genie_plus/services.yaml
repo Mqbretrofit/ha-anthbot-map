@@ -83,15 +83,15 @@ set_mow_height:
       selector:
         select:
           options:
-            - 30
-            - 35
-            - 40
-            - 45
-            - 50
-            - 55
-            - 60
-            - 65
-            - 70
+            - "30"
+            - "35"
+            - "40"
+            - "45"
+            - "50"
+            - "55"
+            - "60"
+            - "65"
+            - "70"
     serial_number:
       name: Serial number
       description: Optional mower serial number or list of serial numbers.

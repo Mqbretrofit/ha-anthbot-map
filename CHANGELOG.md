@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.56 / map card v127 — 2026-07-18
+
+### Fixed
+
+- A `manifest.json` megfelel a hassfest által elvárt kulcssorrendnek és formázásnak.
+- A vágásmagasság-választó értékei érvényes szöveges opciók a `services.yaml` fájlban.
+- A `hacs.json` már nem tartalmaz elavult `domains` és `iot_class` mezőket.
+- A repository tartalmazza a HACS által ellenőrzött brand ikont.
+
 ## 1.0.55 / map card v127 — 2026-07-18
 
 ### Added
