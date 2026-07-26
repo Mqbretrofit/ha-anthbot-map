@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 import time
 from typing import Any
@@ -21,6 +21,10 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 _LIVE_HISTORY_REFRESH_SECONDS = 5.0
+_IDLE_PROPERTY_REFRESH_SECONDS = 60.0
+_HISTORY_PATH_REQUEST_SECONDS = 10.0
+_HISTORY_PATH_RESPONSE_TIMEOUT_SECONDS = 4.0
+_HISTORY_PATH_RESPONSE_POLL_SECONDS = 0.5
 
 _LIVE_STATUS_VALUES = {
     "globalmowing",
@@ -79,6 +83,43 @@ def _normalize_status(value: str) -> str:
     return value.lower().replace("-", "").replace("_", "").replace(" ", "")
 
 
+def is_robot_shadow_fresh(data: dict[str, Any], max_age_seconds: int = 30) -> bool:
+    """Return whether the mower shadow contains a recent device timestamp."""
+    value = data.get("timestamp")
+    timestamp: float | None = None
+    if isinstance(value, (int, float)):
+        timestamp = float(value)
+    elif isinstance(value, str):
+        raw = value.strip()
+        if raw.isdigit():
+            if len(raw) == 14:
+                try:
+                    timestamp = datetime.strptime(raw, "%Y%m%d%H%M%S").replace(
+                        tzinfo=timezone.utc
+                    ).timestamp()
+                except ValueError:
+                    timestamp = None
+            else:
+                timestamp = float(raw)
+    if timestamp is None:
+        return False
+    if timestamp > 10_000_000_000:
+        timestamp /= 1000
+    return 0 <= datetime.now(timezone.utc).timestamp() - timestamp <= max_age_seconds
+
+
+def is_robot_online(data: dict[str, Any], max_age_seconds: int = 30) -> bool:
+    """Return whether the mower explicitly reports online or recently replied."""
+    online = data.get("online")
+    if isinstance(online, bool):
+        return online
+    if isinstance(online, (int, float)):
+        return online == 1
+    if isinstance(online, str) and online.strip().lower() in {"1", "true", "on", "online"}:
+        return True
+    return is_robot_shadow_fresh(data, max_age_seconds=max_age_seconds)
+
+
 class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Coordinator to fetch and cache Anthbot shadow state."""
 
@@ -113,6 +154,7 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_history_path_request: str | None = None
         self._last_history_path_request_monotonic = 0.0
         self._last_path_download_monotonic = 0.0
+        self._last_property_request_monotonic = 0.0
         self._consecutive_cloud_failures = 0
 
     @property
@@ -124,14 +166,28 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Fetch the latest state from the cloud endpoint."""
         try:
             property_state = await self.client.async_get_shadow_reported_state()
-            if _is_live_position_state(property_state):
+            now = time.monotonic()
+            is_live_hint = _is_live_position_state(
+                property_state
+            ) or _is_live_position_state(self.reported_state)
+            property_refresh_seconds = (
+                _LIVE_HISTORY_REFRESH_SECONDS
+                if is_live_hint
+                else _IDLE_PROPERTY_REFRESH_SECONDS
+            )
+            if (
+                self._last_property_request_monotonic == 0.0
+                or now - self._last_property_request_monotonic
+                >= property_refresh_seconds
+            ):
                 try:
                     await self.client.async_request_all_properties()
+                    self._last_property_request_monotonic = time.monotonic()
                     await asyncio.sleep(0.5)
                     property_state = await self.client.async_get_shadow_reported_state()
                 except AnthbotGenieApiError as err:
                     _LOGGER.debug(
-                        "Live Anthbot property request failed for %s: %s",
+                        "Anthbot property refresh request failed for %s: %s",
                         self.client.serial_number,
                         err,
                     )
@@ -210,7 +266,15 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
             if should_refresh_path:
                 try:
-                    await self._async_request_history_path(path_time, force=is_live)
+                    refreshed_property_state = await self._async_request_history_path(
+                        path_time,
+                        force=is_live,
+                    )
+                    if refreshed_property_state is not None:
+                        property_state = refreshed_property_state
+                        refreshed_path_time = property_state.get("path_time")
+                        if isinstance(refreshed_path_time, str):
+                            path_time = refreshed_path_time
                     try:
                         service_state = await self.client.async_get_service_reported_state()
                     except AnthbotGenieApiError:
@@ -263,6 +327,9 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             merged_state["_history_path_last_download_monotonic"] = self._last_path_download_monotonic
             merged_state["_map_definition_error"] = self._map_definition_error
             merged_state["_path_definition_error"] = self._path_definition_error
+            merged_state["_cloud_connected"] = True
+            merged_state["_cloud_last_success"] = datetime.now(timezone.utc).isoformat()
+            merged_state["_robot_online"] = is_robot_online(property_state)
             self._consecutive_cloud_failures = 0
             return merged_state
         except AnthbotGenieApiError as err:
@@ -274,43 +341,90 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     self._consecutive_cloud_failures,
                     err,
                 )
-                return self.reported_state
+                stale_state = dict(self.reported_state)
+                stale_state["_cloud_connected"] = False
+                stale_state["_cloud_error"] = str(err)
+                return stale_state
             raise UpdateFailed(str(err)) from err
 
-    async def _async_request_history_path(self, path_time: str | None, *, force: bool = False) -> None:
-        """Ask the mower to refresh the app-style history path before download."""
+    async def _async_request_history_path(
+        self,
+        path_time: str | None,
+        *,
+        force: bool = False,
+    ) -> dict[str, Any] | None:
+        """Ask the mower to upload its complete current path before download.
+
+        The official Genie app publishes ``req_all_path`` with integer data
+        ``1`` when the map view requests a fresh mowing path. The mower then
+        uploads ``path_<serial>.txt`` and changes ``path_time`` in the property
+        shadow. Wait for that shadow change so the following presigned download
+        cannot race the upload.
+        """
         request_key = path_time or "latest"
         now = time.monotonic()
-        if (
-            not force
-            and self._last_history_path_request == request_key
-            and now - self._last_history_path_request_monotonic
-            < _LIVE_HISTORY_REFRESH_SECONDS
-        ):
-            return
+        elapsed = now - self._last_history_path_request_monotonic
+        if elapsed < _HISTORY_PATH_REQUEST_SECONDS:
+            return None
+        if not force and self._last_history_path_request == request_key:
+            return None
 
-        for cmd in ("req_history_mapping_path", "getHisPath", "ReqHisPath"):
+        try:
+            await self.client.async_publish_service_command(
+                cmd="req_all_path",
+                data=1,
+            )
+        except AnthbotGenieApiError as err:
+            _LOGGER.debug(
+                "Anthbot full path request failed for %s: %s",
+                self.client.serial_number,
+                err,
+            )
+            return None
+
+        self._last_history_path_request = request_key
+        self._last_history_path_request_monotonic = time.monotonic()
+        _LOGGER.debug(
+            "Requested Anthbot full path upload for %s using req_all_path",
+            self.client.serial_number,
+        )
+
+        deadline = time.monotonic() + _HISTORY_PATH_RESPONSE_TIMEOUT_SECONDS
+        latest_state: dict[str, Any] | None = None
+        while time.monotonic() < deadline:
+            await asyncio.sleep(_HISTORY_PATH_RESPONSE_POLL_SECONDS)
             try:
-                await self.client.async_publish_service_command(
-                    cmd=cmd,
-                    data={} if path_time is None else {"path_time": path_time},
+                latest_state = (
+                    await self.client.async_get_shadow_reported_state()
                 )
-                await asyncio.sleep(0.8)
-                self._last_history_path_request = request_key
-                self._last_history_path_request_monotonic = time.monotonic()
-                _LOGGER.debug(
-                    "Requested Anthbot history path refresh for %s using %s",
-                    self.client.serial_number,
-                    cmd,
-                )
-                return
             except AnthbotGenieApiError as err:
                 _LOGGER.debug(
-                    "Anthbot history path request failed for %s using %s: %s",
+                    "Anthbot path_time check failed for %s: %s",
                     self.client.serial_number,
-                    cmd,
                     err,
                 )
+                continue
+
+            refreshed_path_time = latest_state.get("path_time")
+            if (
+                isinstance(refreshed_path_time, str)
+                and refreshed_path_time
+                and refreshed_path_time != path_time
+            ):
+                _LOGGER.debug(
+                    "Anthbot full path upload completed for %s: %s -> %s",
+                    self.client.serial_number,
+                    path_time,
+                    refreshed_path_time,
+                )
+                return latest_state
+
+        _LOGGER.debug(
+            "Anthbot full path upload for %s did not change path_time within %.1f s",
+            self.client.serial_number,
+            _HISTORY_PATH_RESPONSE_TIMEOUT_SECONDS,
+        )
+        return latest_state
 
 
 def _find_history_path_url(*values: Any) -> str | None:

@@ -93,6 +93,69 @@ const translations = {
   km: { language:"ភាសា", automatic:"ស្វ័យប្រវត្តិ", waiting:"កំពុងរង់ចាំធាតុផែនទី", status:"ស្ថានភាព", control:"ការគ្រប់គ្រង", settings:"ការកំណត់", diagnostics:"ការវិនិច្ឆ័យ", map:"ផែនទី", close:"បិទ", zoomIn:"ពង្រីក", zoomOut:"បង្រួម", zones:"តំបន់", forbidden:"តំបន់ហាមឃាត់", position:"ទីតាំង", heading:"ទិសដៅ", startLabel:"ចាប់ផ្តើម", startSub:"កាត់ស្មៅពេញតំបន់", stopLabel:"បញ្ឈប់", stopSub:"បញ្ឈប់កិច្ចការទាំងអស់", homeLabel:"ស្ថានីយសាក", homeSub:"ត្រឡប់ទៅស្ថានីយសាក", zoneStart:"ចាប់ផ្តើមកាត់ស្មៅតាមតំបន់", cloud:"ការតភ្ជាប់ក្លោដ", customDirection:"ទិសដៅផ្ទាល់ខ្លួន", rainDelay:"រង់ចាំក្រោយភ្លៀង", volume:"កម្រិតសំឡេង", rainDetection:"ការរកឃើញភ្លៀង", showZones:"បង្ហាញតំបន់", showBoundary:"បង្ហាញព្រំដែន", battery:"ថ្ម", charging:"កំពុងសាក", connection:"ការតភ្ជាប់", cutHeight:"កម្ពស់កាត់", mowedArea:"ផ្ទៃដែលបានកាត់", mowingTime:"ពេលវេលាកាត់", totalArea:"ផ្ទៃសរុប", error:"កំហុស", calibration:"ការក្រិត", yamlCopy:"ចម្លង YAML", status_standby:"រង់ចាំ", status_paused:"បានផ្អាក", status_mowing:"កំពុងកាត់ស្មៅ", status_unknown:"មិនស្គាល់" },
 };
 
+const feedbackTranslations = {
+  en: { cloudChecking:"☁ Cloud: checking…", cloudDisconnected:"☁ Cloud: disconnected", cloudRobotOnline:"☁ Cloud: active · Robot: online", cloudRobotNoResponse:"☁ Cloud: active · Robot: not responding", commandSentWaiting:"{command}: command sent, waiting for confirmation.", commandConfirmed:"{command}: confirmed by the robot.", commandNotConfirmed:"{command}: accepted by the cloud, but not confirmed by the robot.", commandFailed:"Operation failed: {command}" },
+  hu: { cloudChecking:"☁ Felhő: ellenőrzés…", cloudDisconnected:"☁ Felhő: nincs kapcsolat", cloudRobotOnline:"☁ Felhő: aktív · Robot: online", cloudRobotNoResponse:"☁ Felhő: aktív · Robot: nem válaszol", commandSentWaiting:"{command}: parancs elküldve, visszaigazolásra vár.", commandConfirmed:"{command}: a robot visszaigazolta.", commandNotConfirmed:"{command}: a felhő elfogadta, de a robot nem igazolta vissza.", commandFailed:"A művelet sikertelen: {command}" },
+  de: { cloudChecking:"☁ Cloud: wird geprüft…", cloudDisconnected:"☁ Cloud: keine Verbindung", cloudRobotOnline:"☁ Cloud: aktiv · Roboter: online", cloudRobotNoResponse:"☁ Cloud: aktiv · Roboter antwortet nicht", commandSentWaiting:"{command}: Befehl gesendet, Bestätigung wird erwartet.", commandConfirmed:"{command}: vom Roboter bestätigt.", commandNotConfirmed:"{command}: von der Cloud akzeptiert, aber nicht vom Roboter bestätigt.", commandFailed:"Vorgang fehlgeschlagen: {command}" },
+  fr: { cloudChecking:"☁ Cloud : vérification…", cloudDisconnected:"☁ Cloud : déconnecté", cloudRobotOnline:"☁ Cloud : actif · Robot : en ligne", cloudRobotNoResponse:"☁ Cloud : actif · Robot sans réponse", commandSentWaiting:"{command} : commande envoyée, en attente de confirmation.", commandConfirmed:"{command} : confirmée par le robot.", commandNotConfirmed:"{command} : acceptée par le cloud, mais non confirmée par le robot.", commandFailed:"Échec de l’opération : {command}" },
+  es: { cloudChecking:"☁ Nube: comprobando…", cloudDisconnected:"☁ Nube: sin conexión", cloudRobotOnline:"☁ Nube: activa · Robot: en línea", cloudRobotNoResponse:"☁ Nube: activa · Robot sin respuesta", commandSentWaiting:"{command}: comando enviado, esperando confirmación.", commandConfirmed:"{command}: confirmado por el robot.", commandNotConfirmed:"{command}: aceptado por la nube, pero no confirmado por el robot.", commandFailed:"Error en la operación: {command}" },
+  it: { cloudChecking:"☁ Cloud: verifica…", cloudDisconnected:"☁ Cloud: disconnesso", cloudRobotOnline:"☁ Cloud: attivo · Robot: online", cloudRobotNoResponse:"☁ Cloud: attivo · Robot non risponde", commandSentWaiting:"{command}: comando inviato, in attesa di conferma.", commandConfirmed:"{command}: confermato dal robot.", commandNotConfirmed:"{command}: accettato dal cloud, ma non confermato dal robot.", commandFailed:"Operazione non riuscita: {command}" },
+  pt: { cloudChecking:"☁ Nuvem: a verificar…", cloudDisconnected:"☁ Nuvem: sem ligação", cloudRobotOnline:"☁ Nuvem: ativa · Robô: online", cloudRobotNoResponse:"☁ Nuvem: ativa · Robô sem resposta", commandSentWaiting:"{command}: comando enviado, a aguardar confirmação.", commandConfirmed:"{command}: confirmado pelo robô.", commandNotConfirmed:"{command}: aceite pela nuvem, mas não confirmado pelo robô.", commandFailed:"Falha na operação: {command}" },
+  nl: { cloudChecking:"☁ Cloud: controleren…", cloudDisconnected:"☁ Cloud: niet verbonden", cloudRobotOnline:"☁ Cloud: actief · Robot: online", cloudRobotNoResponse:"☁ Cloud: actief · Robot reageert niet", commandSentWaiting:"{command}: opdracht verzonden, wacht op bevestiging.", commandConfirmed:"{command}: bevestigd door de robot.", commandNotConfirmed:"{command}: geaccepteerd door de cloud, maar niet bevestigd door de robot.", commandFailed:"Bewerking mislukt: {command}" },
+  pl: { cloudChecking:"☁ Chmura: sprawdzanie…", cloudDisconnected:"☁ Chmura: brak połączenia", cloudRobotOnline:"☁ Chmura: aktywna · Robot: online", cloudRobotNoResponse:"☁ Chmura: aktywna · Robot nie odpowiada", commandSentWaiting:"{command}: polecenie wysłane, oczekiwanie na potwierdzenie.", commandConfirmed:"{command}: potwierdzone przez robota.", commandNotConfirmed:"{command}: zaakceptowane przez chmurę, ale niepotwierdzone przez robota.", commandFailed:"Operacja nie powiodła się: {command}" },
+  cs: { cloudChecking:"☁ Cloud: kontrola…", cloudDisconnected:"☁ Cloud: nepřipojeno", cloudRobotOnline:"☁ Cloud: aktivní · Robot: online", cloudRobotNoResponse:"☁ Cloud: aktivní · Robot neodpovídá", commandSentWaiting:"{command}: příkaz odeslán, čeká se na potvrzení.", commandConfirmed:"{command}: potvrzeno robotem.", commandNotConfirmed:"{command}: přijato cloudem, ale nepotvrzeno robotem.", commandFailed:"Operace se nezdařila: {command}" },
+  sk: { cloudChecking:"☁ Cloud: kontrola…", cloudDisconnected:"☁ Cloud: nepripojené", cloudRobotOnline:"☁ Cloud: aktívny · Robot: online", cloudRobotNoResponse:"☁ Cloud: aktívny · Robot neodpovedá", commandSentWaiting:"{command}: príkaz odoslaný, čaká sa na potvrdenie.", commandConfirmed:"{command}: potvrdené robotom.", commandNotConfirmed:"{command}: prijaté cloudom, ale nepotvrdené robotom.", commandFailed:"Operácia zlyhala: {command}" },
+  ro: { cloudChecking:"☁ Cloud: se verifică…", cloudDisconnected:"☁ Cloud: deconectat", cloudRobotOnline:"☁ Cloud: activ · Robot: online", cloudRobotNoResponse:"☁ Cloud: activ · Robotul nu răspunde", commandSentWaiting:"{command}: comandă trimisă, se așteaptă confirmarea.", commandConfirmed:"{command}: confirmată de robot.", commandNotConfirmed:"{command}: acceptată de cloud, dar neconfirmată de robot.", commandFailed:"Operațiunea a eșuat: {command}" },
+  da: { cloudChecking:"☁ Cloud: kontrollerer…", cloudDisconnected:"☁ Cloud: ikke forbundet", cloudRobotOnline:"☁ Cloud: aktiv · Robot: online", cloudRobotNoResponse:"☁ Cloud: aktiv · Robot svarer ikke", commandSentWaiting:"{command}: kommando sendt, afventer bekræftelse.", commandConfirmed:"{command}: bekræftet af robotten.", commandNotConfirmed:"{command}: accepteret af cloud, men ikke bekræftet af robotten.", commandFailed:"Handlingen mislykkedes: {command}" },
+  sv: { cloudChecking:"☁ Moln: kontrollerar…", cloudDisconnected:"☁ Moln: frånkopplat", cloudRobotOnline:"☁ Moln: aktivt · Robot: online", cloudRobotNoResponse:"☁ Moln: aktivt · Robot svarar inte", commandSentWaiting:"{command}: kommando skickat, väntar på bekräftelse.", commandConfirmed:"{command}: bekräftat av roboten.", commandNotConfirmed:"{command}: accepterat av molnet, men inte bekräftat av roboten.", commandFailed:"Åtgärden misslyckades: {command}" },
+  no: { cloudChecking:"☁ Sky: kontrollerer…", cloudDisconnected:"☁ Sky: ikke tilkoblet", cloudRobotOnline:"☁ Sky: aktiv · Robot: online", cloudRobotNoResponse:"☁ Sky: aktiv · Robot svarer ikke", commandSentWaiting:"{command}: kommando sendt, venter på bekreftelse.", commandConfirmed:"{command}: bekreftet av roboten.", commandNotConfirmed:"{command}: godtatt av skyen, men ikke bekreftet av roboten.", commandFailed:"Handlingen mislyktes: {command}" },
+  fi: { cloudChecking:"☁ Pilvi: tarkistetaan…", cloudDisconnected:"☁ Pilvi: ei yhteyttä", cloudRobotOnline:"☁ Pilvi: aktiivinen · Robotti: online", cloudRobotNoResponse:"☁ Pilvi: aktiivinen · Robotti ei vastaa", commandSentWaiting:"{command}: komento lähetetty, odotetaan vahvistusta.", commandConfirmed:"{command}: robotin vahvistama.", commandNotConfirmed:"{command}: pilvi hyväksyi, mutta robotti ei vahvistanut.", commandFailed:"Toiminto epäonnistui: {command}" },
+  "zh-CN": { cloudChecking:"☁ 云端：正在检查…", cloudDisconnected:"☁ 云端：未连接", cloudRobotOnline:"☁ 云端：已连接 · 机器人：在线", cloudRobotNoResponse:"☁ 云端：已连接 · 机器人无响应", commandSentWaiting:"{command}：命令已发送，等待确认。", commandConfirmed:"{command}：机器人已确认。", commandNotConfirmed:"{command}：云端已接受，但机器人未确认。", commandFailed:"操作失败：{command}" },
+  "zh-TW": { cloudChecking:"☁ 雲端：正在檢查…", cloudDisconnected:"☁ 雲端：未連線", cloudRobotOnline:"☁ 雲端：已連線 · 機器人：在線", cloudRobotNoResponse:"☁ 雲端：已連線 · 機器人無回應", commandSentWaiting:"{command}：指令已傳送，等待確認。", commandConfirmed:"{command}：機器人已確認。", commandNotConfirmed:"{command}：雲端已接受，但機器人未確認。", commandFailed:"操作失敗：{command}" },
+  tr: { cloudChecking:"☁ Bulut: kontrol ediliyor…", cloudDisconnected:"☁ Bulut: bağlantı yok", cloudRobotOnline:"☁ Bulut: etkin · Robot: çevrimiçi", cloudRobotNoResponse:"☁ Bulut: etkin · Robot yanıt vermiyor", commandSentWaiting:"{command}: komut gönderildi, onay bekleniyor.", commandConfirmed:"{command}: robot tarafından onaylandı.", commandNotConfirmed:"{command}: bulut tarafından kabul edildi, ancak robot onaylamadı.", commandFailed:"İşlem başarısız: {command}" },
+  th: { cloudChecking:"☁ คลาวด์: กำลังตรวจสอบ…", cloudDisconnected:"☁ คลาวด์: ไม่ได้เชื่อมต่อ", cloudRobotOnline:"☁ คลาวด์: ทำงาน · หุ่นยนต์: ออนไลน์", cloudRobotNoResponse:"☁ คลาวด์: ทำงาน · หุ่นยนต์ไม่ตอบสนอง", commandSentWaiting:"{command}: ส่งคำสั่งแล้ว กำลังรอการยืนยัน", commandConfirmed:"{command}: หุ่นยนต์ยืนยันแล้ว", commandNotConfirmed:"{command}: คลาวด์ยอมรับแล้ว แต่หุ่นยนต์ไม่ได้ยืนยัน", commandFailed:"การทำงานล้มเหลว: {command}" },
+  vi: { cloudChecking:"☁ Đám mây: đang kiểm tra…", cloudDisconnected:"☁ Đám mây: mất kết nối", cloudRobotOnline:"☁ Đám mây: hoạt động · Robot: trực tuyến", cloudRobotNoResponse:"☁ Đám mây: hoạt động · Robot không phản hồi", commandSentWaiting:"{command}: đã gửi lệnh, đang chờ xác nhận.", commandConfirmed:"{command}: robot đã xác nhận.", commandNotConfirmed:"{command}: đám mây đã chấp nhận nhưng robot chưa xác nhận.", commandFailed:"Thao tác thất bại: {command}" },
+  ko: { cloudChecking:"☁ 클라우드: 확인 중…", cloudDisconnected:"☁ 클라우드: 연결 끊김", cloudRobotOnline:"☁ 클라우드: 활성 · 로봇: 온라인", cloudRobotNoResponse:"☁ 클라우드: 활성 · 로봇 응답 없음", commandSentWaiting:"{command}: 명령을 전송했습니다. 확인 대기 중입니다.", commandConfirmed:"{command}: 로봇이 확인했습니다.", commandNotConfirmed:"{command}: 클라우드는 수락했지만 로봇이 확인하지 않았습니다.", commandFailed:"작업 실패: {command}" },
+  km: { cloudChecking:"☁ ក្លោដ៖ កំពុងពិនិត្យ…", cloudDisconnected:"☁ ក្លោដ៖ មិនបានភ្ជាប់", cloudRobotOnline:"☁ ក្លោដ៖ សកម្ម · រ៉ូបូត៖ អនឡាញ", cloudRobotNoResponse:"☁ ក្លោដ៖ សកម្ម · រ៉ូបូតមិនឆ្លើយតប", commandSentWaiting:"{command}៖ បានផ្ញើពាក្យបញ្ជា កំពុងរង់ចាំការបញ្ជាក់។", commandConfirmed:"{command}៖ រ៉ូបូតបានបញ្ជាក់។", commandNotConfirmed:"{command}៖ ក្លោដបានទទួល ប៉ុន្តែរ៉ូបូតមិនបានបញ្ជាក់។", commandFailed:"ប្រតិបត្តិការបរាជ័យ៖ {command}" },
+};
+
+const commandTranslations = {
+  en:{ commandOuterEdge:"Outer edge mowing", commandDockEdge:"Dock surroundings mowing" },
+  hu:{ commandOuterEdge:"Külső szegélynyírás", commandDockEdge:"Töltő körüli nyírás" },
+  de:{ commandOuterEdge:"Außenkantenmähen", commandDockEdge:"Mähen um die Ladestation" },
+  fr:{ commandOuterEdge:"Tonte de la bordure extérieure", commandDockEdge:"Tonte autour de la station" },
+  es:{ commandOuterEdge:"Corte del borde exterior", commandDockEdge:"Corte alrededor de la base" },
+  it:{ commandOuterEdge:"Taglio del bordo esterno", commandDockEdge:"Taglio intorno alla base" },
+  pt:{ commandOuterEdge:"Corte da borda exterior", commandDockEdge:"Corte em redor da base" },
+  nl:{ commandOuterEdge:"Buitenrand maaien", commandDockEdge:"Rond het laadstation maaien" },
+  pl:{ commandOuterEdge:"Koszenie zewnętrznej krawędzi", commandDockEdge:"Koszenie wokół stacji" },
+  cs:{ commandOuterEdge:"Sečení vnějšího okraje", commandDockEdge:"Sečení kolem stanice" },
+  sk:{ commandOuterEdge:"Kosenie vonkajšieho okraja", commandDockEdge:"Kosenie okolo stanice" },
+  ro:{ commandOuterEdge:"Tunderea marginii exterioare", commandDockEdge:"Tunderea în jurul stației" },
+  da:{ commandOuterEdge:"Klipning af yderkant", commandDockEdge:"Klipning omkring ladestationen" },
+  sv:{ commandOuterEdge:"Klippning av ytterkant", commandDockEdge:"Klippning runt laddstationen" },
+  no:{ commandOuterEdge:"Klipping av ytterkant", commandDockEdge:"Klipping rundt ladestasjonen" },
+  fi:{ commandOuterEdge:"Ulkoreunan leikkuu", commandDockEdge:"Leikkuu latausaseman ympärillä" },
+  "zh-CN":{ commandOuterEdge:"外边界修剪", commandDockEdge:"充电座周边修剪" },
+  "zh-TW":{ commandOuterEdge:"外邊界修剪", commandDockEdge:"充電座周邊修剪" },
+  tr:{ commandOuterEdge:"Dış kenar biçme", commandDockEdge:"Şarj istasyonu çevresini biçme" },
+  th:{ commandOuterEdge:"ตัดขอบด้านนอก", commandDockEdge:"ตัดรอบแท่นชาร์จ" },
+  vi:{ commandOuterEdge:"Cắt viền ngoài", commandDockEdge:"Cắt quanh trạm sạc" },
+  ko:{ commandOuterEdge:"외곽 가장자리 잔디 깎기", commandDockEdge:"충전소 주변 잔디 깎기" },
+  km:{ commandOuterEdge:"កាត់គែមខាងក្រៅ", commandDockEdge:"កាត់ជុំវិញស្ថានីយសាក" },
+};
+
+const menuTranslations = {
+  en:{ menu:"Menu" }, hu:{ menu:"Menü" }, de:{ menu:"Menü" },
+  fr:{ menu:"Menu" }, es:{ menu:"Menú" }, it:{ menu:"Menu" },
+  pt:{ menu:"Menu" }, nl:{ menu:"Menu" }, pl:{ menu:"Menu" },
+  cs:{ menu:"Nabídka" }, sk:{ menu:"Ponuka" }, ro:{ menu:"Meniu" },
+  da:{ menu:"Menu" }, sv:{ menu:"Meny" }, no:{ menu:"Meny" },
+  fi:{ menu:"Valikko" }, "zh-CN":{ menu:"菜单" }, "zh-TW":{ menu:"選單" },
+  tr:{ menu:"Menü" }, th:{ menu:"เมนู" }, vi:{ menu:"Trình đơn" },
+  ko:{ menu:"메뉴" }, km:{ menu:"ម៉ឺនុយ" },
+};
+
 export function normalizeLanguage(value) {
   const raw = String(value || "en").replace("_", "-");
   const lower = raw.toLowerCase();
@@ -108,5 +171,5 @@ export function resolveLanguage(selection, hass) {
 }
 
 export function translate(language, key) {
-  return translations[language]?.[key] ?? en[key] ?? key;
+  return translations[language]?.[key] ?? feedbackTranslations[language]?.[key] ?? commandTranslations[language]?.[key] ?? menuTranslations[language]?.[key] ?? en[key] ?? feedbackTranslations.en[key] ?? commandTranslations.en[key] ?? menuTranslations.en[key] ?? key;
 }

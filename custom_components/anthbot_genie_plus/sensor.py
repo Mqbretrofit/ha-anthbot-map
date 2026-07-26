@@ -868,6 +868,10 @@ class AnthbotMapSensorEntity(
             "path_binary_paths": _definition_binary_paths(path_definition),
             "map_definition_error": state.get("_map_definition_error"),
             "path_definition_error": state.get("_path_definition_error"),
+            "cloud_connected": state.get("_cloud_connected"),
+            "cloud_last_success": state.get("_cloud_last_success"),
+            "cloud_error": state.get("_cloud_error"),
+            "robot_online": state.get("_robot_online"),
         }        
 
 

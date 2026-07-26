@@ -13,9 +13,10 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .api import AnthbotGenieApiError
 from .const import DOMAIN
 from .coordinator import AnthbotGenieDataUpdateCoordinator
-from .commands import async_start_mowing
+from .commands import async_prepare_cloud_connection, async_start_mowing
 from .zones import auto_zones, manual_zones
 
 
@@ -125,7 +126,13 @@ class AnthbotButtonEntity(
         """Run the button action."""
         key = self.entity_description.key
         if key == "connect_cloud":
-            pass
+            connected = await async_prepare_cloud_connection(
+                self.coordinator, attempts=3, wait_seconds=5
+            )
+            if not connected:
+                raise AnthbotGenieApiError(
+                    "The mower did not confirm its cloud connection"
+                )
         elif key == "start_full_mow":
             await async_start_mowing(self.coordinator, app_state=1)
         elif key == "start_outer_edge_mow":
@@ -135,12 +142,18 @@ class AnthbotButtonEntity(
                 expected_modes={"bordermowing", "edgemowing", "gototarget"},
             )
         elif key == "start_dock_edge_mow":
+            if not await async_prepare_cloud_connection(self.coordinator):
+                raise AnthbotGenieApiError(
+                    "The mower did not confirm its cloud connection; dock mowing was not started"
+                )
             await self.coordinator.client.async_publish_service_command(cmd="nest_mow_start", data=1)
         elif key == "stop_mow":
+            await async_prepare_cloud_connection(self.coordinator)
             await self.coordinator.client.async_publish_service_command(
                 cmd="stop_all_tasks", data=1
             )
         elif key == "return_to_dock":
+            await async_prepare_cloud_connection(self.coordinator)
             await self.coordinator.client.async_publish_service_command(
                 cmd="charge_start", data=1
             )
@@ -223,6 +236,10 @@ class AnthbotZoneButtonEntity(
 
     async def async_press(self) -> None:
         """Start mowing the selected zone."""
+        if not await async_prepare_cloud_connection(self.coordinator):
+            raise AnthbotGenieApiError(
+                "The mower did not confirm its cloud connection; zone mowing was not started"
+            )
         if self._zone_kind == "manual":
             await self.coordinator.client.async_publish_service_command(
                 cmd="custom_area_mow_start",

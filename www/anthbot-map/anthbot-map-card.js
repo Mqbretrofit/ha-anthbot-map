@@ -1,5 +1,5 @@
-import { AnthbotMapRenderer } from "./renderer.js?v=126";
-import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=101";
+import { AnthbotMapRenderer } from "./renderer.js?v=127";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=103";
 import {
   adjustCalibration,
   cardToYaml,
@@ -65,6 +65,7 @@ class AnthbotMapCard extends HTMLElement {
     this.transparentBackground = false;
     this.glassBackground = false;
     this.optimisticSettings = new Map();
+    this.commandConfirmationToken = 0;
     this.selectedLanguage = "auto";
     this.floatingMenuOpen = false;
   }
@@ -94,7 +95,10 @@ class AnthbotMapCard extends HTMLElement {
       : typeof config.glassBackground === "boolean"
         ? config.glassBackground
         : Boolean(savedInterface.glassBackground);
-    this.selectedLanguage = config.language || window.localStorage.getItem("anthbot-map-language") || "auto";
+    this.selectedLanguage = savedInterface.language
+      || window.localStorage.getItem("anthbot-map-language")
+      || config.language
+      || "auto";
     this.stopRefreshTimer();
     window.clearTimeout(this.pendingRefreshTimer);
     this.calibration = readCalibration(config);
@@ -153,7 +157,7 @@ class AnthbotMapCard extends HTMLElement {
       .join(" ");
     root.innerHTML = `
       <ha-card class="${cardClasses}">
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=126")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=127")}">
         <style>
           .anthbot-menu-toggle { position:absolute; z-index:40; min-height:46px; padding:9px 15px; border:1px solid rgba(255,255,255,.38); border-radius:999px; background:rgba(10,18,26,.48); color:#fff; backdrop-filter:blur(10px); box-shadow:0 8px 28px rgba(0,0,0,.26); font:inherit; font-weight:800; cursor:pointer; }
           .anthbot-menu-toggle { right:14px; bottom:14px; }
@@ -164,6 +168,10 @@ class AnthbotMapCard extends HTMLElement {
           .anthbot-glass-panel .app-shell, .anthbot-glass-panel .app-panel { background:transparent !important; border:0 !important; }
           .anthbot-glass-panel .top-menu { background:rgba(7,15,23,.30) !important; border:1px solid rgba(255,255,255,.10); border-radius:14px; margin:2px 10px 8px; }
           .anthbot-glass-panel .panel-tabs { padding-inline:10px; }
+          .cloud-status { font-size:12px; font-weight:800; color:#aeb7c2; }
+          .cloud-status[data-state="online"] { color:#55e58a; }
+          .cloud-status[data-state="waiting"] { color:#ffd45c; }
+          .cloud-status[data-state="offline"] { color:#ff6b6b; }
           .anthbot-glass-panel .command-dock { display:block !important; position:static !important; inset:auto !important; transform:none !important; margin:8px 10px 12px; background:rgba(6,14,22,.24) !important; }
           @media (max-width:720px) { .anthbot-glass-panel { left:8px; right:8px; bottom:66px; width:auto; max-height:72%; } .anthbot-menu-toggle { right:10px; bottom:10px; } }
         </style>
@@ -180,6 +188,7 @@ class AnthbotMapCard extends HTMLElement {
               <div class="status-copy">
                 <span class="status-label">${this.t("status")}</span>
                 <strong data-role="mower-status">-</strong>
+                <span class="cloud-status" data-role="cloud-status">${this.t("cloudChecking")}</span>
               </div>
             </div>
           </div>
@@ -210,6 +219,7 @@ class AnthbotMapCard extends HTMLElement {
             <span data-role="zone-count">${this.t("zones")}: -</span>
             <span data-role="pose">${this.t("position")}: -</span>
             <span data-role="heading">${this.t("heading")}: -</span>
+            <span class="cloud-status" data-role="map-cloud-status">${this.t("cloudChecking")}</span>
           </div>
           <div class="map-overlay command-dock">
             <div class="zone-strip" data-role="zone-controls"></div>
@@ -228,9 +238,9 @@ class AnthbotMapCard extends HTMLElement {
               </button>
             </div>
           </div>
-          <button type="button" class="anthbot-menu-toggle" data-floating-menu="toggle">&#9776; Men&uuml;</button>
+          <button type="button" class="anthbot-menu-toggle" data-floating-menu="toggle">&#9776; ${this.t("menu")}</button>
           <section class="anthbot-glass-panel">
-            <div class="anthbot-glass-head"><strong>Anthbot vez&eacute;rl&eacute;s</strong><button type="button" class="anthbot-glass-close" data-floating-menu="close">&times;</button></div>
+            <div class="anthbot-glass-head"><strong>Anthbot ${this.t("control")}</strong><button type="button" class="anthbot-glass-close" data-floating-menu="close">&times;</button></div>
           </section>
         </div>
         <section class="app-panel">
@@ -454,6 +464,7 @@ class AnthbotMapCard extends HTMLElement {
   }
 
   updateMapBadges(attributes) {
+    this.updateCloudStatus(attributes);
     const customAreas = Array.isArray(attributes.area_definition?.custom_areas)
       ? attributes.area_definition.custom_areas.length
       : 0;
@@ -688,6 +699,7 @@ class AnthbotMapCard extends HTMLElement {
       this.selectedLanguage = select.value;
       this.config = { ...this.config, language: select.value };
       window.localStorage.setItem("anthbot-map-language", select.value);
+      this.saveInterfaceSettings();
       this.render();
     });
     tile.append(title, select);
@@ -874,6 +886,40 @@ class AnthbotMapCard extends HTMLElement {
       console.warn("Anthbot map refresh failed", error);
     } finally {
       this.refreshInFlight = false;
+      this.syncEntityAndRenderer();
+      window.setTimeout(() => this.syncEntityAndRenderer(), 750);
+      window.setTimeout(() => this.syncEntityAndRenderer(), 1800);
+    }
+  }
+
+  updateCloudStatus(attributes = {}) {
+    const cloudConnected = attributes.cloud_connected;
+    const robotOnline = attributes.robot_online;
+    const state = cloudConnected === false ? "offline" : robotOnline === true ? "online" : "waiting";
+    const text = cloudConnected === false
+      ? this.t("cloudDisconnected")
+      : robotOnline === true
+        ? this.t("cloudRobotOnline")
+        : cloudConnected === true
+          ? this.t("cloudRobotNoResponse")
+          : this.t("cloudChecking");
+    for (const role of ["cloud-status", "map-cloud-status"]) {
+      const badge = this.shadowRoot?.querySelector(`[data-role="${role}"]`);
+      if (badge) {
+        badge.textContent = text;
+        badge.dataset.state = state;
+      }
+    }
+  }
+
+  syncEntityAndRenderer() {
+    if (!this._hass || !this.config?.entity) {
+      return;
+    }
+    const latestEntity = this._hass.states[this.config.entity];
+    if (latestEntity) {
+      this.entity = latestEntity;
+      this.updateRenderer();
     }
   }
 
@@ -920,9 +966,72 @@ class AnthbotMapCard extends HTMLElement {
         ...data,
         entity_id: this.config.entity,
       });
+      this.notify(this.feedback("commandSentWaiting", this.commandLabel(service)));
+      this.scheduleRefresh(200);
+      void this.waitForCommandConfirmation(service);
     } catch (error) {
-      this.notify(`A muvelet hibat jelzett: ${service}`);
+      this.notify(this.feedback("commandFailed", this.commandLabel(service)));
       throw error;
+    }
+  }
+
+  commandLabel(service) {
+    return ({
+      start_full_mow: this.t("startLabel"),
+      start_zone_mow: this.t("zoneStart"),
+      start_outer_edge_mow: this.t("commandOuterEdge"),
+      start_dock_edge_mow: this.t("commandDockEdge"),
+      stop_mow: this.t("stopLabel"),
+      return_to_dock: this.t("homeLabel"),
+      connect_cloud: this.t("cloud"),
+    })[service] || service;
+  }
+
+  feedback(key, command) {
+    return this.t(key).replaceAll("{command}", command);
+  }
+
+  commandStatusValues() {
+    const entity = this._hass?.states?.[this.config?.entity];
+    const attributes = entity?.attributes || {};
+    const robotState = attributes.robot_sta;
+    return [
+      this.getRelatedEntity("status")?.state,
+      attributes.mower_status,
+      attributes.robot_status_raw,
+      typeof robotState === "object" ? robotState?.value : robotState,
+      entity?.state,
+    ].map((value) => String(value || "").toLowerCase().replace(/[\s_-]+/g, ""));
+  }
+
+  commandIsConfirmed(service) {
+    const expected = ({
+      start_full_mow: ["mowing", "globalmowing", "working", "cutting"],
+      start_zone_mow: ["mowing", "zonemowing", "regionmowing", "working", "cutting"],
+      start_outer_edge_mow: ["mowing", "bordermowing", "edgecutting", "working"],
+      start_dock_edge_mow: ["mowing", "nestmowing", "working"],
+      stop_mow: ["paused", "pause", "standby", "idle"],
+      return_to_dock: ["returning", "backtodock", "docking", "charging", "charge"],
+    })[service];
+    return Array.isArray(expected) && this.commandStatusValues().some((status) =>
+      expected.some((value) => status.includes(value)),
+    );
+  }
+
+  async waitForCommandConfirmation(service) {
+    if (service === "connect_cloud") return;
+    const token = ++this.commandConfirmationToken;
+    const deadline = Date.now() + 20000;
+    while (token === this.commandConfirmationToken && Date.now() < deadline) {
+      await new Promise((resolve) => window.setTimeout(resolve, 1000));
+      await this.refreshEntities();
+      if (this.commandIsConfirmed(service)) {
+        this.notify(this.feedback("commandConfirmed", this.commandLabel(service)));
+        return;
+      }
+    }
+    if (token === this.commandConfirmationToken) {
+      this.notify(this.feedback("commandNotConfirmed", this.commandLabel(service)));
     }
   }
 
@@ -948,14 +1057,14 @@ class AnthbotMapCard extends HTMLElement {
           input.value = Number(state.state);
         }
       }
-      this.notify(`A beallitas nem sikerult: ${entityId || kind}`);
+      this.notify(`${this.t("settingFailed")}: ${entityId || kind}`);
       throw error;
     }
   }
 
   async toggleSwitchEntity(kind, entityId, checked, input) {
     if (!entityId && !this.hasSwitchFallback(kind)) {
-      this.notify(`Nem talaltam kapcsolot: ${kind}`);
+      this.notify(`${this.t("switchMissing")}: ${kind}`);
       return;
     }
     try {
@@ -969,7 +1078,7 @@ class AnthbotMapCard extends HTMLElement {
       if (input) {
         input.checked = !checked;
       }
-      this.notify(`A kapcsolo nem sikerult: ${entityId}`);
+      this.notify(`${this.t("operationFailed")}: ${entityId}`);
       throw error;
     }
   }
@@ -1044,7 +1153,7 @@ class AnthbotMapCard extends HTMLElement {
     try {
       await this._hass.callService(domain, service, data, target);
     } catch (error) {
-      this.notify(`Az egyedi gombművelet hibát jelzett: ${serviceName}`);
+      this.notify(`${this.t("operationFailed")}: ${serviceName}`);
       throw error;
     }
   }
@@ -1137,6 +1246,7 @@ class AnthbotMapCard extends HTMLElement {
       themeBackground: this.themeBackground,
       glassBackground: this.glassBackground,
       transparentBackground: this.transparentBackground,
+      language: this.selectedLanguage,
     }));
   }
 
