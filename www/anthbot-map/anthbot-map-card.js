@@ -1,5 +1,5 @@
-import { AnthbotMapRenderer } from "./renderer.js?v=127";
-import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=103";
+import { AnthbotMapRenderer } from "./renderer.js?v=133";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=133";
 import {
   adjustCalibration,
   cardToYaml,
@@ -60,19 +60,23 @@ class AnthbotMapCard extends HTMLElement {
     this.mapExpanded = false;
     this.showDecodedBoundary = true;
     this.showZones = true;
+    this.showNoGoLabels = true;
+    this.mapOverlayOverrides = {};
     this.mapOnly = false;
     this.themeBackground = false;
     this.transparentBackground = false;
     this.glassBackground = false;
     this.optimisticSettings = new Map();
     this.commandConfirmationToken = 0;
+    this.suppressMapExpandClickUntil = 0;
     this.selectedLanguage = "auto";
+    this.languageOverride = false;
     this.floatingMenuOpen = false;
   }
 
   setConfig(config) {
     if (!config?.entity) {
-      throw new Error("Az Anthbot terkep kartyahoz meg kell adni egy entity-t");
+      throw new Error("Anthbot map card requires an entity");
     }
 
     this.config = config;
@@ -95,17 +99,36 @@ class AnthbotMapCard extends HTMLElement {
       : typeof config.glassBackground === "boolean"
         ? config.glassBackground
         : Boolean(savedInterface.glassBackground);
-    this.selectedLanguage = savedInterface.language
-      || window.localStorage.getItem("anthbot-map-language")
-      || config.language
-      || "auto";
+    this.languageOverride = savedInterface.languageOverride === true;
+    this.selectedLanguage = this.languageOverride
+      ? savedInterface.language || "auto"
+      : config.language
+        || savedInterface.language
+        || window.localStorage.getItem("anthbot-map-language")
+        || "auto";
     this.stopRefreshTimer();
     window.clearTimeout(this.pendingRefreshTimer);
     this.calibration = readCalibration(config);
     this.robotCalibration = readRobotCalibration(config);
     this.decodedBoundaryCalibration = readDecodedBoundaryCalibration(config);
-    this.showDecodedBoundary = config.show_decoded_boundary !== false && config.showDecodedBoundary !== false;
-    this.showZones = config.show_zones !== false && config.showZones !== false;
+    this.mapOverlayOverrides = savedInterface.mapOverlayOverrides && typeof savedInterface.mapOverlayOverrides === "object"
+      ? { ...savedInterface.mapOverlayOverrides }
+      : {};
+    const overlaySetting = (key, snakeKey, camelKey) => {
+      if (this.mapOverlayOverrides[key] === true && typeof savedInterface[key] === "boolean") {
+        return savedInterface[key];
+      }
+      if (typeof config[snakeKey] === "boolean") {
+        return config[snakeKey];
+      }
+      if (typeof config[camelKey] === "boolean") {
+        return config[camelKey];
+      }
+      return true;
+    };
+    this.showDecodedBoundary = overlaySetting("showDecodedBoundary", "show_decoded_boundary", "showDecodedBoundary");
+    this.showZones = overlaySetting("showZones", "show_zones", "showZones");
+    this.showNoGoLabels = overlaySetting("showNoGoLabels", "show_no_go_labels", "showNoGoLabels");
     this.render();
   }
 
@@ -157,7 +180,7 @@ class AnthbotMapCard extends HTMLElement {
       .join(" ");
     root.innerHTML = `
       <ha-card class="${cardClasses}">
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=127")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=133")}">
         <style>
           .anthbot-menu-toggle { position:absolute; z-index:40; min-height:46px; padding:9px 15px; border:1px solid rgba(255,255,255,.38); border-radius:999px; background:rgba(10,18,26,.48); color:#fff; backdrop-filter:blur(10px); box-shadow:0 8px 28px rgba(0,0,0,.26); font:inherit; font-weight:800; cursor:pointer; }
           .anthbot-menu-toggle { right:14px; bottom:14px; }
@@ -210,8 +233,8 @@ class AnthbotMapCard extends HTMLElement {
             <strong>${this.t("map")}</strong>
             <span>${this.t("expand")}</span>
           </div>
+          <button type="button" class="map-close" data-action="close-map" title="${this.t("close")}">&times;</button>
           <div class="map-overlay map-actions">
-            <button type="button" data-action="close-map" title="${this.t("close")}">&times;</button>
             <button type="button" data-action="zoom-in" title="${this.t("zoomIn")}">+</button>
             <button type="button" data-action="zoom-out" title="${this.t("zoomOut")}">-</button>
           </div>
@@ -271,9 +294,9 @@ class AnthbotMapCard extends HTMLElement {
             <button type="button" data-robot-calibration="wider">${this.t("wider")}</button>
             <button type="button" data-robot-calibration="rotate-left">${this.t("rotation")} -</button>
             <button type="button" data-robot-calibration="rotate-right">${this.t("rotation")} +</button>
-            <button type="button" data-robot-calibration="rotate-left-large">Robot irany -15</button>
-            <button type="button" data-robot-calibration="rotate-right-large">Robot irany +15</button>
-            <button type="button" data-robot-calibration="rotate-around">Robot irany 180</button>
+            <button type="button" data-robot-calibration="rotate-left-large">${this.t("robotDirection")} -15°</button>
+            <button type="button" data-robot-calibration="rotate-right-large">${this.t("robotDirection")} +15°</button>
+            <button type="button" data-robot-calibration="rotate-around">${this.t("robotDirection")} 180°</button>
             <button type="button" data-action="reset-robot">${this.t("reset")}</button>
           </div>
           <div class="calibration-title">${this.t("boundaryFit")}</div>
@@ -334,8 +357,31 @@ class AnthbotMapCard extends HTMLElement {
     const canvas = root.querySelector("canvas");
     const canvasWrap = root.querySelector(".canvas-wrap");
     this.applyAutomaticMapSize(canvasWrap);
+    const pointerStarts = new Map();
+    let mapGestureMoved = false;
+    canvasWrap?.addEventListener("pointerdown", (event) => {
+      pointerStarts.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    });
+    canvasWrap?.addEventListener("pointermove", (event) => {
+      const start = pointerStarts.get(event.pointerId);
+      if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) {
+        mapGestureMoved = true;
+      }
+    });
+    const finishMapGesture = (event) => {
+      pointerStarts.delete(event.pointerId);
+      if (mapGestureMoved) {
+        this.suppressMapExpandClickUntil = Date.now() + 250;
+      }
+      if (!pointerStarts.size) {
+        mapGestureMoved = false;
+      }
+    };
+    canvasWrap?.addEventListener("pointerup", finishMapGesture);
+    canvasWrap?.addEventListener("pointercancel", finishMapGesture);
     canvasWrap?.addEventListener("click", (event) => {
       if (event.composedPath().includes(glassPanel)) return;
+      if (Date.now() < this.suppressMapExpandClickUntil) return;
       if (!mapOnly && !this.mapExpanded && !event.target.closest("button")) {
         this.setMapExpanded(true);
       }
@@ -615,6 +661,7 @@ class AnthbotMapCard extends HTMLElement {
       this.createInterfaceSwitch(this.t("transparentBackground"), "transparentBackground"),
       this.createMapOverlaySwitch(this.t("showZones"), "showZones"),
       this.createMapOverlaySwitch(this.t("showBoundary"), "showDecodedBoundary"),
+      this.createMapOverlaySwitch(this.t("showNoGoLabels"), "showNoGoLabels"),
     );
     body.appendChild(grid);
   }
@@ -697,6 +744,7 @@ class AnthbotMapCard extends HTMLElement {
     }
     select.addEventListener("change", () => {
       this.selectedLanguage = select.value;
+      this.languageOverride = true;
       this.config = { ...this.config, language: select.value };
       window.localStorage.setItem("anthbot-map-language", select.value);
       this.saveInterfaceSettings();
@@ -764,7 +812,7 @@ class AnthbotMapCard extends HTMLElement {
     const checked = entity?.state === "on";
     const tile = document.createElement("label");
     tile.className = "panel-tile switch-tile";
-    tile.title = entityId || "Nem talalt switch entity";
+    tile.title = entityId || this.t("switchMissing");
     tile.innerHTML = `
       <span>${label}</span>
       <input type="checkbox" ${checked ? "checked" : ""} ${entityId ? "" : "disabled"}>
@@ -830,8 +878,9 @@ class AnthbotMapCard extends HTMLElement {
       calibration: this.calibration,
       robotCalibration: this.robotCalibration,
       decodedBoundaryCalibration: this.decodedBoundaryCalibration,
-      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=101"),
+      robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=133"),
       noGoLabel: this.t("forbidden"),
+      showNoGoLabels: this.showNoGoLabels,
       robotSize: this.config.robot_size ?? this.config.robotSize,
       robotImageRotation: this.config.robot_image_rotation ?? this.config.robotImageRotation,
       robotHeadingSource: this.config.robot_heading_source || this.config.robotHeadingSource,
@@ -1217,10 +1266,13 @@ class AnthbotMapCard extends HTMLElement {
 
   setMapOverlayVisibility(key, visible) {
     this[key] = Boolean(visible);
+    this.mapOverlayOverrides[key] = true;
     this.renderer?.setOptions({
       showDecodedBoundary: this.showDecodedBoundary,
       showZones: this.showZones,
+      showNoGoLabels: this.showNoGoLabels,
     });
+    this.saveInterfaceSettings();
     this.updateYaml();
   }
 
@@ -1247,6 +1299,11 @@ class AnthbotMapCard extends HTMLElement {
       glassBackground: this.glassBackground,
       transparentBackground: this.transparentBackground,
       language: this.selectedLanguage,
+      languageOverride: this.languageOverride,
+      showDecodedBoundary: this.showDecodedBoundary,
+      showZones: this.showZones,
+      showNoGoLabels: this.showNoGoLabels,
+      mapOverlayOverrides: this.mapOverlayOverrides,
     }));
   }
 
@@ -1331,6 +1388,7 @@ class AnthbotMapCard extends HTMLElement {
       language: this.selectedLanguage,
       show_decoded_boundary: this.showDecodedBoundary,
       show_zones: this.showZones,
+      show_no_go_labels: this.showNoGoLabels,
     };
   }
 
@@ -1563,8 +1621,8 @@ customElements.define("anthbot-map-card", AnthbotMapCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "anthbot-map-card",
-  name: "Anthbot terkep kartya",
-  description: "Canvas terkepmegjelenito Anthbot map sensorokhoz",
+  name: "Anthbot Map Card",
+  description: "Canvas map display and controls for Anthbot map sensors",
 });
 
 
