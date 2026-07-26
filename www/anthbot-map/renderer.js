@@ -527,7 +527,9 @@ export class AnthbotMapRenderer {
       return null;
     }
 
-    const key = `boundary:${width}x${height}:${raster.runs.length}:${raster.runs[0]}:${raster.runs[raster.runs.length - 1]}`;
+    const boundaryColor = this.options.boundaryColor || COLORS.boundaryStroke;
+    const boundaryWidth = clamp(Number(this.options.boundaryWidth) || 3, 1, 12);
+    const key = `boundary:${width}x${height}:${raster.runs.length}:${raster.runs[0]}:${raster.runs[raster.runs.length - 1]}:${boundaryColor}:${boundaryWidth}`;
     if (this.rasterBoundaryCanvas && this.rasterBoundaryKey === key) {
       return this.rasterBoundaryCanvas;
     }
@@ -546,6 +548,7 @@ export class AnthbotMapRenderer {
     }
 
     const imageData = ctx.createImageData(width, height);
+    const radius = Math.max(0, Math.ceil((boundaryWidth - 1) / 2));
     for (let y = 0; y < height; y += 1) {
       for (let x = 0; x < width; x += 1) {
         const index = y * width + x;
@@ -567,14 +570,32 @@ export class AnthbotMapRenderer {
           continue;
         }
 
-        const target = ((height - 1 - y) * width + x) * 4;
-        imageData.data[target] = 55;
-        imageData.data[target + 1] = 95;
-        imageData.data[target + 2] = 255;
-        imageData.data[target + 3] = value === 255 ? 210 : 245;
+        const alpha = value === 255 ? 210 : 245;
+        for (let offsetY = -radius; offsetY <= radius; offsetY += 1) {
+          for (let offsetX = -radius; offsetX <= radius; offsetX += 1) {
+            if (offsetX * offsetX + offsetY * offsetY > radius * radius + 0.5) {
+              continue;
+            }
+            const targetX = x + offsetX;
+            const targetY = height - 1 - y + offsetY;
+            if (targetX < 0 || targetX >= width || targetY < 0 || targetY >= height) {
+              continue;
+            }
+            const target = (targetY * width + targetX) * 4;
+            imageData.data[target] = 255;
+            imageData.data[target + 1] = 255;
+            imageData.data[target + 2] = 255;
+            imageData.data[target + 3] = Math.max(imageData.data[target + 3], alpha);
+          }
+        }
       }
     }
     ctx.putImageData(imageData, 0, 0);
+    ctx.save();
+    ctx.globalCompositeOperation = "source-in";
+    ctx.fillStyle = boundaryColor;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
 
     this.rasterBoundaryCanvas = canvas;
     this.rasterBoundaryKey = key;
@@ -627,7 +648,9 @@ export class AnthbotMapRenderer {
       ctx.fill();
       ctx.stroke();
 
-      this.drawZoneLabel(ctx, screenPoints, zoneLabel(zone, isNoGo, this.options.noGoLabel));
+      if (!isNoGo || this.options.showNoGoLabels !== false) {
+        this.drawZoneLabel(ctx, screenPoints, zoneLabel(zone, isNoGo, this.options.noGoLabel));
+      }
     }
   }
 
@@ -648,6 +671,14 @@ export class AnthbotMapRenderer {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const width = ctx.measureText(label).width + 14;
+    const canvasWidth = ctx.canvas.width / (this.dpr || 1);
+    const canvasHeight = ctx.canvas.height / (this.dpr || 1);
+    if (canvasWidth > width + 8) {
+      center.x = clamp(center.x, width / 2 + 4, canvasWidth - width / 2 - 4);
+    } else {
+      center.x = canvasWidth / 2;
+    }
+    center.y = canvasHeight > 34 ? clamp(center.y, 17, canvasHeight - 17) : canvasHeight / 2;
     ctx.fillStyle = "rgba(12, 18, 24, 0.72)";
     roundRect(ctx, center.x - width / 2, center.y - 13, width, 26, 13);
     ctx.fill();

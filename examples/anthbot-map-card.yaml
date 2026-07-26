@@ -35,4 +35,5 @@ boundary_width: 3
 boundary_color: rgba(74, 101, 255, 0.9)
 show_decoded_boundary: false
 show_zones: false
+show_no_go_labels: true
 robot_heading_source: cloud

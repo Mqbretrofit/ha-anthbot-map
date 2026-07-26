@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.0.59 / map card v128 — 2026-07-26
+
+### Fixed
+
+- A YAML-ban megadott `language` elsőbbséget kap a korábban elmentett
+  böngészőbeállítással szemben.
+- A dekódolt határvonal is használja a `boundary_color` és `boundary_width`
+  beállításokat.
+- A térkép húzása után nem nyílik meg tévesen a nagy térképnézet.
+- A nagy térkép bezárógombja kártyaszerkesztés közben is elérhető marad.
+- A tiltott zónák feliratai a látható térképen belül maradnak, és a
+  `show_no_go_labels` opcióval kikapcsolhatók.
+- Megszűntek a kártyakódban maradt, angol felületen is megjelenő magyar
+  szövegek.
+- A robot PNG kivágási maszkjából eltűntek a belső átlátszó lyukak.
+
+### Changed
+
+- A Lovelace-erőforrás gyorsítótár-verziója `v128`.
+
 ## 1.0.58 / map card v127 — 2026-07-26
 
 ### Added

@@ -88,6 +88,10 @@ ha-card.map-expanded .canvas-wrap {
   z-index: 50;
 }
 
+ha-card.map-expanded {
+  overflow: visible;
+}
+
 ha-card.map-expanded .canvas-wrap::before {
   background: rgba(0, 0, 0, 0.62);
   content: "";
@@ -156,8 +160,13 @@ ha-card.transparent-background .calibration {
 ha-card:not(.map-expanded) .map-title,
 ha-card:not(.map-expanded) .map-badges,
 ha-card:not(.map-expanded) .command-dock,
-ha-card:not(.map-expanded) .map-actions {
+ha-card:not(.map-expanded) .map-actions,
+ha-card:not(.map-expanded) .map-close {
   display: none;
+}
+
+ha-card.map-expanded .map-title {
+  left: 76px;
 }
 
 .preview-hint {
@@ -300,8 +309,18 @@ button:hover {
   width: 42px;
 }
 
-.map-actions button[data-action="close-map"] {
+.map-close {
+  border-radius: 999px;
   font-size: 26px;
+  height: 42px;
+  justify-content: center;
+  left: 18px;
+  min-height: 42px;
+  padding: 0;
+  position: absolute;
+  top: 18px;
+  width: 42px;
+  z-index: 60;
 }
 
 .map-actions button.active {
