@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.0.58 / map card v127 — 2026-07-26
+
+### Added
+
+- Felhőkapcsolat-ébresztés és visszaigazolás a robotparancsok előtt.
+- Felhő- és robotkapcsolati állapot a térképkártyán.
+- Visszajelzés a parancs elküldéséről, végrehajtásáról vagy időtúllépéséről.
+
+### Changed
+
+- Aktív nyírás közben az integráció a gyári Genie alkalmazással azonos
+  `req_all_path` parancsot küldi `data: 1` értékkel.
+- A friss útvonalfájl letöltése előtt megvárja a `path_time` változását.
+- Az útvonal-feltöltési kérés legfeljebb 10 másodpercenként fut.
+- A Lovelace-erőforrás gyorsítótár-verziója `v127`.
+
+### Fixed
+
+- A lenyírt terület és az aktuális nyomvonal frissítéséhez már nem kell
+  megnyitni a gyári Anthbot alkalmazást.
+- A fűnyírási magasság szolgáltatásválasztója szöveges értékeket használ,
+  ahogy azt a Home Assistant elvárja.
+
+A v1.0.54 és v1.0.58 közötti részletes változások:
+[CHANGELOG_v1.0.58_HU.md](CHANGELOG_v1.0.58_HU.md).
+
 ## 1.0.54 / map card v126 — 2026-07-17
 
 ### Added
