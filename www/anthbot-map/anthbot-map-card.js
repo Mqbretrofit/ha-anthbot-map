@@ -1,5 +1,5 @@
-import { AnthbotMapRenderer } from "./renderer.js?v=133";
-import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=133";
+import { AnthbotMapRenderer } from "./renderer.js?v=134";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=134";
 import {
   adjustCalibration,
   cardToYaml,
@@ -7,7 +7,7 @@ import {
   readDecodedBoundaryCalibration,
   readRobotCalibration,
   resetCalibration,
-} from "./calibration.js?v=101";
+} from "./calibration.js?v=134";
 
 const ENTITY_MAP = {
   battery: ["sensor", ["battery_level"]],
@@ -60,6 +60,7 @@ class AnthbotMapCard extends HTMLElement {
     this.mapExpanded = false;
     this.showDecodedBoundary = true;
     this.showZones = true;
+    this.showNoGoZones = true;
     this.showNoGoLabels = true;
     this.mapOverlayOverrides = {};
     this.mapOnly = false;
@@ -128,6 +129,7 @@ class AnthbotMapCard extends HTMLElement {
     };
     this.showDecodedBoundary = overlaySetting("showDecodedBoundary", "show_decoded_boundary", "showDecodedBoundary");
     this.showZones = overlaySetting("showZones", "show_zones", "showZones");
+    this.showNoGoZones = overlaySetting("showNoGoZones", "show_no_go_zones", "showNoGoZones");
     this.showNoGoLabels = overlaySetting("showNoGoLabels", "show_no_go_labels", "showNoGoLabels");
     this.render();
   }
@@ -180,7 +182,7 @@ class AnthbotMapCard extends HTMLElement {
       .join(" ");
     root.innerHTML = `
       <ha-card class="${cardClasses}">
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=133")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=134")}">
         <style>
           .anthbot-menu-toggle { position:absolute; z-index:40; min-height:46px; padding:9px 15px; border:1px solid rgba(255,255,255,.38); border-radius:999px; background:rgba(10,18,26,.48); color:#fff; backdrop-filter:blur(10px); box-shadow:0 8px 28px rgba(0,0,0,.26); font:inherit; font-weight:800; cursor:pointer; }
           .anthbot-menu-toggle { right:14px; bottom:14px; }
@@ -661,6 +663,7 @@ class AnthbotMapCard extends HTMLElement {
       this.createInterfaceSwitch(this.t("transparentBackground"), "transparentBackground"),
       this.createMapOverlaySwitch(this.t("showZones"), "showZones"),
       this.createMapOverlaySwitch(this.t("showBoundary"), "showDecodedBoundary"),
+      this.createMapOverlaySwitch(this.t("showNoGoZones"), "showNoGoZones"),
       this.createMapOverlaySwitch(this.t("showNoGoLabels"), "showNoGoLabels"),
     );
     body.appendChild(grid);
@@ -880,6 +883,7 @@ class AnthbotMapCard extends HTMLElement {
       decodedBoundaryCalibration: this.decodedBoundaryCalibration,
       robotImage: this.config.robot_image || this.config.robotImage || this.resolveAsset("robot.png?v=133"),
       noGoLabel: this.t("forbidden"),
+      showNoGoZones: this.showNoGoZones,
       showNoGoLabels: this.showNoGoLabels,
       robotSize: this.config.robot_size ?? this.config.robotSize,
       robotImageRotation: this.config.robot_image_rotation ?? this.config.robotImageRotation,
@@ -1270,6 +1274,7 @@ class AnthbotMapCard extends HTMLElement {
     this.renderer?.setOptions({
       showDecodedBoundary: this.showDecodedBoundary,
       showZones: this.showZones,
+      showNoGoZones: this.showNoGoZones,
       showNoGoLabels: this.showNoGoLabels,
     });
     this.saveInterfaceSettings();
@@ -1302,6 +1307,7 @@ class AnthbotMapCard extends HTMLElement {
       languageOverride: this.languageOverride,
       showDecodedBoundary: this.showDecodedBoundary,
       showZones: this.showZones,
+      showNoGoZones: this.showNoGoZones,
       showNoGoLabels: this.showNoGoLabels,
       mapOverlayOverrides: this.mapOverlayOverrides,
     }));
@@ -1388,6 +1394,7 @@ class AnthbotMapCard extends HTMLElement {
       language: this.selectedLanguage,
       show_decoded_boundary: this.showDecodedBoundary,
       show_zones: this.showZones,
+      show_no_go_zones: this.showNoGoZones,
       show_no_go_labels: this.showNoGoLabels,
     };
   }

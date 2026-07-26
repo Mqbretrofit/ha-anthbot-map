@@ -182,19 +182,21 @@ export class AnthbotMapRenderer {
     if (this.options.showZones !== false) {
       this.drawZones(ctx, geometry, getZones(areaDefinition, ["custom_areas", "zones", "customAreas"]), "zone");
     }
-    this.drawZones(
-      ctx,
-      geometry,
-      getZones(areaDefinition, [
-        "forbid_areas",
-        "forbidAreas",
-        "remote_forbid_areas",
-        "remoteForbidAreas",
-        "no_go_areas",
-        "noGoAreas",
-      ]),
-      "no-go",
-    );
+    if (this.options.showNoGoZones !== false) {
+      this.drawZones(
+        ctx,
+        geometry,
+        getZones(areaDefinition, [
+          "forbid_areas",
+          "forbidAreas",
+          "remote_forbid_areas",
+          "remoteForbidAreas",
+          "no_go_areas",
+          "noGoAreas",
+        ]),
+        "no-go",
+      );
+    }
     if (this.options.showLegacyBoundary === true) {
       this.drawBoundary(ctx, geometry, getBoundaryPaths(mapSource));
     }
