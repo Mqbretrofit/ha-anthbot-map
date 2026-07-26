@@ -189,6 +189,14 @@ export function cardToYaml(config = {}, calibration, robotCalibration, decodedBo
     lines.push("show_zones: false");
   }
 
+  if (config.show_no_go_zones === false || config.showNoGoZones === false) {
+    lines.push("show_no_go_zones: false");
+  }
+
+  if (config.show_no_go_labels === false || config.showNoGoLabels === false) {
+    lines.push("show_no_go_labels: false");
+  }
+
   if (config.show_legacy_boundary === true || config.showLegacyBoundary === true) {
     lines.push("show_legacy_boundary: true");
   }

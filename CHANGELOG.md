@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.60 / map card v134 — 2026-07-26
+
+### Added
+
+- A teljes tiltott zónaréteg külön kapcsolóval megjeleníthető vagy elrejthető.
+- Az új `show_no_go_zones` YAML-beállítás és a felületi kapcsoló állapota
+  oldalfrissítés után is megmarad.
+- A tiltott zónák területe és felirata egymástól függetlenül kapcsolható.
+
+### Changed
+
+- A Lovelace-erőforrás gyorsítótár-verziója `v134`.
+
 ## 1.0.59 / map card v128 — 2026-07-26
 
 ### Fixed
