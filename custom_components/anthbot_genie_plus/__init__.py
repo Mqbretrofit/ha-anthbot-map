@@ -50,8 +50,10 @@ from .const import (
     SERVICE_STOP_MOW,
 )
 from .coordinator import AnthbotGenieDataUpdateCoordinator
-from .commands import async_start_mowing
+from .commands import async_prepare_cloud_connection, async_start_mowing
 from .zones import auto_zones, manual_zones
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 PLATFORMS = [
     "sensor",
@@ -317,6 +319,10 @@ async def _async_register_services(hass: HomeAssistant) -> None:
 
     async def _handle_start_dock_edge_mow(service_call) -> None:
         for coordinator in _resolve_target_coordinators(hass, service_call.data):
+            if not await async_prepare_cloud_connection(coordinator):
+                raise AnthbotGenieApiError(
+                    "The mower did not confirm its cloud connection; dock mowing was not started"
+                )
             await coordinator.client.async_publish_service_command(cmd="nest_mow_start", data=1)
             await _async_sync_after_command(coordinator)
 
@@ -325,13 +331,20 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         if not targets:
             raise AnthbotGenieApiError("No target Anthbot mower found")
         for coordinator in targets:
-            await _async_sync_now(coordinator)
+            connected = await async_prepare_cloud_connection(
+                coordinator, attempts=3, wait_seconds=5
+            )
+            if not connected:
+                raise AnthbotGenieApiError(
+                    "The mower did not confirm its cloud connection"
+                )
 
     async def _handle_stop_mow(service_call) -> None:
         targets = _resolve_target_coordinators(hass, service_call.data)
         if not targets:
             raise AnthbotGenieApiError("No target Anthbot mower found")
         for coordinator in targets:
+            await async_prepare_cloud_connection(coordinator)
             await coordinator.client.async_publish_service_command(
                 cmd="stop_all_tasks", data=1
             )
@@ -342,6 +355,7 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         if not targets:
             raise AnthbotGenieApiError("No target Anthbot mower found")
         for coordinator in targets:
+            await async_prepare_cloud_connection(coordinator)
             await coordinator.client.async_publish_service_command(
                 cmd="charge_start", data=1
             )
@@ -438,6 +452,10 @@ async def _async_register_services(hass: HomeAssistant) -> None:
                 raise AnthbotGenieApiError(
                     f"No matching zones found for mower {coordinator.client.serial_number}"
                 )
+            if not await async_prepare_cloud_connection(coordinator):
+                raise AnthbotGenieApiError(
+                    "The mower did not confirm its cloud connection; zone mowing was not started"
+                )
             await coordinator.client.async_publish_service_command(
                 cmd="custom_area_mow_start",
                 data={"id": zone_ids},
@@ -454,6 +472,10 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             if not points:
                 raise AnthbotGenieApiError(
                     f"No matching auto-zones found for mower {coordinator.client.serial_number}"
+                )
+            if not await async_prepare_cloud_connection(coordinator):
+                raise AnthbotGenieApiError(
+                    "The mower did not confirm its cloud connection; auto-zone mowing was not started"
                 )
             await coordinator.client.async_publish_service_command(
                 cmd="region_mow_start",
