@@ -1,4 +1,4 @@
-﻿import { createGeometry, getBoundaryPaths, getWorldBounds, getZonePoints, getZones } from "./geometry.js?v=80";
+﻿import { createGeometry, getBoundaryPaths, getWorldBounds, getZonePoints, getZones } from "./geometry.js?v=137";
 
 const COLORS = Object.freeze({
   background: "#18202a",
@@ -420,11 +420,6 @@ export class AnthbotMapRenderer {
       return false;
     }
 
-    const boundaryCanvas = this.getRasterBoundaryCanvas(raster);
-    if (!boundaryCanvas) {
-      return false;
-    }
-
     const minX = Number(bounds.min_x ?? bounds.minX);
     const maxX = Number(bounds.max_x ?? bounds.maxX);
     const minY = Number(bounds.min_y ?? bounds.minY);
@@ -434,15 +429,76 @@ export class AnthbotMapRenderer {
     }
 
     const boundaryGeometry = applyMapCalibration(geometry, this.decodedBoundaryCalibration);
-    drawImageFromWorldRect(ctx, boundaryGeometry, boundaryCanvas, {
+    return this.drawRasterBoundary(ctx, boundaryGeometry, raster, {
       minX,
       maxX,
       minY,
       maxY,
-      dpr: this.dpr,
-      smoothing: false,
     });
-    return true;
+  }
+
+  drawRasterBoundary(ctx, geometry, raster, bounds) {
+    const width = Number(raster?.width);
+    const height = Number(raster?.height);
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+      return false;
+    }
+
+    const pixels = decodeRasterRuns(raster, width, height);
+    if (!pixels) {
+      return false;
+    }
+
+    const stepX = (bounds.maxX - bounds.minX) / width;
+    const stepY = (bounds.maxY - bounds.minY) / height;
+    if (!Number.isFinite(stepX) || !Number.isFinite(stepY) || stepX === 0 || stepY === 0) {
+      return false;
+    }
+
+    const isSolid = (x, y) =>
+      x >= 0 &&
+      x < width &&
+      y >= 0 &&
+      y < height &&
+      pixels[y * width + x] !== 0;
+    const toScreen = (x, y) =>
+      geometry.worldToScreen({
+        x: bounds.minX + x * stepX,
+        y: bounds.minY + y * stepY,
+      });
+    let edgeCount = 0;
+    const addEdge = (x1, y1, x2, y2) => {
+      const start = toScreen(x1, y1);
+      const end = toScreen(x2, y2);
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      edgeCount += 1;
+    };
+
+    ctx.save();
+    ctx.strokeStyle = this.options.boundaryColor || COLORS.boundaryStroke;
+    ctx.lineWidth = clamp(Number(this.options.boundaryWidth) || 3, 1, 12);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        if (!isSolid(x, y)) {
+          continue;
+        }
+        if (!isSolid(x - 1, y)) addEdge(x, y, x, y + 1);
+        if (!isSolid(x + 1, y)) addEdge(x + 1, y, x + 1, y + 1);
+        if (!isSolid(x, y - 1)) addEdge(x, y, x + 1, y);
+        if (!isSolid(x, y + 1)) addEdge(x, y + 1, x + 1, y + 1);
+      }
+    }
+
+    if (edgeCount) {
+      ctx.stroke();
+    }
+    ctx.restore();
+    return edgeCount > 0;
   }
 
   drawMapRaster(ctx, geometry) {
@@ -675,12 +731,16 @@ export class AnthbotMapRenderer {
     const width = ctx.measureText(label).width + 14;
     const canvasWidth = ctx.canvas.width / (this.dpr || 1);
     const canvasHeight = ctx.canvas.height / (this.dpr || 1);
-    if (canvasWidth > width + 8) {
-      center.x = clamp(center.x, width / 2 + 4, canvasWidth - width / 2 - 4);
-    } else {
-      center.x = canvasWidth / 2;
+    if (
+      center.x < 0 ||
+      center.x > canvasWidth ||
+      center.y < 0 ||
+      center.y > canvasHeight ||
+      !polygonIntersectsViewport(points, canvasWidth, canvasHeight)
+    ) {
+      ctx.restore();
+      return;
     }
-    center.y = canvasHeight > 34 ? clamp(center.y, 17, canvasHeight - 17) : canvasHeight / 2;
     ctx.fillStyle = "rgba(12, 18, 24, 0.72)";
     roundRect(ctx, center.x - width / 2, center.y - 13, width, 26, 13);
     ctx.fill();
@@ -1654,6 +1714,86 @@ function roundRect(ctx, x, y, width, height, radius) {
   ctx.lineTo(x, y + radius);
   ctx.quadraticCurveTo(x, y, x + radius, y);
   ctx.closePath();
+}
+
+function polygonIntersectsViewport(points, width, height) {
+  if (!Array.isArray(points) || points.length < 2 || width <= 0 || height <= 0) {
+    return false;
+  }
+
+  const insideViewport = (point) =>
+    point.x >= 0 && point.x <= width && point.y >= 0 && point.y <= height;
+  if (points.some(insideViewport)) {
+    return true;
+  }
+
+  const corners = [
+    { x: 0, y: 0 },
+    { x: width, y: 0 },
+    { x: width, y: height },
+    { x: 0, y: height },
+  ];
+  if (corners.some((corner) => pointInPolygon(corner, points))) {
+    return true;
+  }
+
+  const viewportEdges = corners.map((corner, index) => [
+    corner,
+    corners[(index + 1) % corners.length],
+  ]);
+  for (let index = 0; index < points.length; index += 1) {
+    const start = points[index];
+    const end = points[(index + 1) % points.length];
+    if (viewportEdges.some(([edgeStart, edgeEnd]) => segmentsIntersect(start, end, edgeStart, edgeEnd))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function pointInPolygon(point, polygon) {
+  let inside = false;
+  for (let current = 0, previous = polygon.length - 1; current < polygon.length; previous = current++) {
+    const a = polygon[current];
+    const b = polygon[previous];
+    const crosses =
+      (a.y > point.y) !== (b.y > point.y) &&
+      point.x < ((b.x - a.x) * (point.y - a.y)) / ((b.y - a.y) || Number.EPSILON) + a.x;
+    if (crosses) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function segmentsIntersect(a, b, c, d) {
+  const cross = (p, q, r) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+  const onSegment = (p, q, r) =>
+    Math.min(p.x, r.x) <= q.x &&
+    q.x <= Math.max(p.x, r.x) &&
+    Math.min(p.y, r.y) <= q.y &&
+    q.y <= Math.max(p.y, r.y);
+
+  const abC = cross(a, b, c);
+  const abD = cross(a, b, d);
+  const cdA = cross(c, d, a);
+  const cdB = cross(c, d, b);
+  const epsilon = 1e-9;
+
+  if (
+    ((abC > epsilon && abD < -epsilon) || (abC < -epsilon && abD > epsilon)) &&
+    ((cdA > epsilon && cdB < -epsilon) || (cdA < -epsilon && cdB > epsilon))
+  ) {
+    return true;
+  }
+
+  return (
+    (Math.abs(abC) <= epsilon && onSegment(a, c, b)) ||
+    (Math.abs(abD) <= epsilon && onSegment(a, d, b)) ||
+    (Math.abs(cdA) <= epsilon && onSegment(c, a, d)) ||
+    (Math.abs(cdB) <= epsilon && onSegment(c, b, d))
+  );
 }
 
 

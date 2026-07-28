@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.0.61 / map card v137 — 2026-07-28
+
+### Fixed
+
+- Mind a 23 támogatott nyelv teljes kártyafordítást kapott: a fő felület,
+  a beállítások, a kalibrálás, az állapotok, a parancsok és a hibaüzenetek
+  egyik nyelvnél sem esnek vissza hiányzó kulcs miatt angol szövegre.
+- A magyar START, STOP és HOME gombfeliratok is magyarul jelennek meg.
+- A dekódolt raszteres határvonal szélessége most képernyőpixelben értendő;
+  a `boundary_width: 1` valóban egy vékony, egypixeles körvonalat rajzol.
+- A tiltott zóna felirata a zóna eredeti középpontján marad, és eltűnik,
+  amikor ez a pont kikerül a látható térképről.
+- A tiltott zóna felirata csak addig rajzolódik ki, amíg maga a poligon is
+  metszi a látható térképet.
+- Minden frontendmodul egységes `v137` gyorsítótár-verziót kapott, ezért a
+  böngésző nem töltheti vissza a korábbi, képernyőszélhez rögzített feliratot.
+
+### Changed
+
+- A Lovelace-erőforrás gyorsítótár-verziója `v137`.
+
 ## 1.0.60 / map card v134 — 2026-07-26
 
 ### Added

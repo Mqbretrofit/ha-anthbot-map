@@ -1,5 +1,5 @@
-import { AnthbotMapRenderer } from "./renderer.js?v=134";
-import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=134";
+import { AnthbotMapRenderer } from "./renderer.js?v=137";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=137";
 import {
   adjustCalibration,
   cardToYaml,
@@ -7,7 +7,7 @@ import {
   readDecodedBoundaryCalibration,
   readRobotCalibration,
   resetCalibration,
-} from "./calibration.js?v=134";
+} from "./calibration.js?v=137";
 
 const ENTITY_MAP = {
   battery: ["sensor", ["battery_level"]],
@@ -182,7 +182,7 @@ class AnthbotMapCard extends HTMLElement {
       .join(" ");
     root.innerHTML = `
       <ha-card class="${cardClasses}">
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=134")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=137")}">
         <style>
           .anthbot-menu-toggle { position:absolute; z-index:40; min-height:46px; padding:9px 15px; border:1px solid rgba(255,255,255,.38); border-radius:999px; background:rgba(10,18,26,.48); color:#fff; backdrop-filter:blur(10px); box-shadow:0 8px 28px rgba(0,0,0,.26); font:inherit; font-weight:800; cursor:pointer; }
           .anthbot-menu-toggle { right:14px; bottom:14px; }
@@ -629,7 +629,7 @@ class AnthbotMapCard extends HTMLElement {
       const tile = document.createElement("button");
       tile.type = "button";
       tile.className = "panel-tile zone-tile";
-      tile.innerHTML = `<strong>${zone.name || `Zone ${zone.id}`}</strong><span>${this.t("zoneStart")}</span>`;
+      tile.innerHTML = `<strong>${zone.name || `${this.t("zone")} ${zone.id}`}</strong><span>${this.t("zoneStart")}</span>`;
       tile.addEventListener("click", () => this.startZone(zone));
       grid.appendChild(tile);
     }
@@ -698,9 +698,9 @@ class AnthbotMapCard extends HTMLElement {
       [this.t("dockContact"), "rechargeContactLife"],
       ["WiFi", "wifi"],
       ["Bluetooth", "bluetooth"],
-      ["Firmware", "firmware"],
-      ["GPS lat", "gpsLatitude"],
-      ["GPS lon", "gpsLongitude"],
+      [this.t("firmware"), "firmware"],
+      [this.t("gpsLatitude"), "gpsLatitude"],
+      [this.t("gpsLongitude"), "gpsLongitude"],
       [this.t("lastUpdate"), "shadowUpdated"],
     ]) {
       grid.appendChild(this.createInfoTile(item[0], item[1]));
@@ -741,7 +741,7 @@ class AnthbotMapCard extends HTMLElement {
     for (const [code, name] of LANGUAGES) {
       const option = document.createElement("option");
       option.value = code;
-      option.textContent = code === "auto" ? `${this.t("automatic")} (${name.split(" / ")[0]})` : name;
+      option.textContent = code === "auto" ? this.t("automatic") : name;
       option.selected = code === this.selectedLanguage;
       select.appendChild(option);
     }
@@ -861,7 +861,7 @@ class AnthbotMapCard extends HTMLElement {
     for (const zone of this.currentZones(areaDefinition)) {
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = zone.name || `Zone ${zone.id}`;
+      button.textContent = zone.name || `${this.t("zone")} ${zone.id}`;
       button.addEventListener("click", () => this.startZone(zone));
       container.appendChild(button);
     }
