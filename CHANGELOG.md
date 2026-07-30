@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.62 — 2026-07-30
+
+### Fixed
+
+- A Home Assistant Recorder többé nem menti el az Anthbot térképszenzor nagy,
+  gyorsan változó attribútumait, így megszűnik a 16 384 bájtos állapotattribútum-
+  korlát túllépése és az ebből eredő adatbázis-terhelés.
+- A térképkártyához szükséges élő attribútumok továbbra is hiánytalanul
+  elérhetők; a változás csak az előzményekben történő tárolást érinti.
+
+### Testing
+
+- Új regressziós teszt ellenőrzi, hogy minden élő térképattribútum szerepel a
+  Recorderből kizárt attribútumok között.
+
 ## 1.0.61 / map card v137 — 2026-07-28
 
 ### Fixed
