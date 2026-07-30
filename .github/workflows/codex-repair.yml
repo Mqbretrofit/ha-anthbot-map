@@ -1,0 +1,135 @@
+name: Codex repair
+
+on:
+  workflow_dispatch:
+    inputs:
+      repair_id:
+        description: Approved repair
+        required: true
+        type: choice
+        options:
+          - map_attributes_too_large
+
+concurrency:
+  group: codex-repair-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  generate_patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      has_patch: ${{ steps.diff.outputs.has_patch }}
+    steps:
+      - name: Validate approved repair
+        env:
+          REPAIR_ID: ${{ inputs.repair_id }}
+        run: |
+          test "$REPAIR_ID" = "map_attributes_too_large"
+
+      - name: Checkout trusted default branch
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Baseline validation
+        run: |
+          python3 -m compileall -q custom_components
+          node --check www/anthbot-map/anthbot-map-card.js
+          node --check www/anthbot-map/renderer.js
+
+      - name: Run Codex
+        id: codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .github/codex/tasks/map_attributes_too_large.md
+          sandbox: workspace-write
+          safety-strategy: drop-sudo
+          output-file: codex-result.md
+
+      - name: Create patch artifact
+        id: diff
+        run: |
+          git add -N .
+          git diff --binary HEAD > codex.patch
+          if [ -s codex.patch ]; then
+            echo "has_patch=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_patch=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload patch
+        if: steps.diff.outputs.has_patch == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-repair-patch
+          path: |
+            codex.patch
+            codex-result.md
+          if-no-files-found: error
+          retention-days: 7
+
+  open_draft_pr:
+    needs: generate_patch
+    if: needs.generate_patch.outputs.has_patch == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout trusted default branch
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Download Codex patch
+        uses: actions/download-artifact@v4
+        with:
+          name: codex-repair-patch
+
+      - name: Apply patch
+        run: git apply --index codex.patch
+
+      - name: Validate patched repository
+        run: |
+          python3 -m compileall -q custom_components
+          node --check www/anthbot-map/anthbot-map-card.js
+          node --check www/anthbot-map/renderer.js
+
+      - name: Open draft pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPAIR_ID: ${{ inputs.repair_id }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          branch="codex/ha-ai-maintainer-$RUN_ID"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -m "Fix map attribute recording via Codex"
+          git push origin "$branch"
+
+          {
+            echo "## HA AI Maintainer repair"
+            echo
+            echo "Codex generated this patch for the approved repair: \`$REPAIR_ID\`."
+            echo
+            echo "- Workflow run: $RUN_URL"
+            echo "- The OpenAI API key was available only to the read-permission patch job."
+            echo "- The write-permission job received only the generated patch."
+            echo "- Review and test the changes before merging."
+          } > pr-body.md
+
+          gh pr create \
+            --draft \
+            --base main \
+            --head "$branch" \
+            --title "Fix oversized Anthbot map attributes" \
+            --body-file pr-body.md
