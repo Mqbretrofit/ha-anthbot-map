@@ -802,6 +802,47 @@ class AnthbotMapSensorEntity(
 ):
     """Anthbot map entity."""
 
+    _unrecorded_attributes = frozenset(
+        {
+            "pose",
+            "mower_status",
+            "robot_status_raw",
+            "cur_pose",
+            "map_scan_pose",
+            "path",
+            "cloud_path",
+            "mowed_path",
+            "path_id",
+            "path_start",
+            "path_task_type",
+            "path_point_count",
+            "path_coordinate_scale",
+            "path_first_point",
+            "map_time",
+            "path_time",
+            "area_time",
+            "history_path_info",
+            "history_path_source",
+            "history_path_live_refresh",
+            "history_path_refresh_interval",
+            "history_path_download_source",
+            "area_definition",
+            "map_definition_status",
+            "path_definition_status",
+            "map_raster",
+            "map_definition_preview",
+            "path_definition_preview",
+            "path_point_types",
+            "map_binary_paths",
+            "path_binary_paths",
+            "map_definition_error",
+            "path_definition_error",
+            "cloud_connected",
+            "cloud_last_success",
+            "cloud_error",
+            "robot_online",
+        }
+    )
     _attr_has_entity_name = True
     _attr_name = "Map"
     _attr_icon = "mdi:map"
