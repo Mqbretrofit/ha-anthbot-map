@@ -55,7 +55,7 @@ jobs:
         id: diff
         run: |
           git add -N .
-          git diff --binary HEAD > codex.patch
+          git diff --binary HEAD -- . ':(exclude)codex-result.md' > codex.patch
           if [ -s codex.patch ]; then
             echo "has_patch=true" >> "$GITHUB_OUTPUT"
           else
