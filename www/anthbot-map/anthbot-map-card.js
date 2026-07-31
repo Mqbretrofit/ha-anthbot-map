@@ -1,5 +1,5 @@
-import { AnthbotMapRenderer } from "./renderer.js?v=137";
-import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=137";
+import { AnthbotMapRenderer } from "./renderer.js?v=138";
+import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=138";
 import {
   adjustCalibration,
   cardToYaml,
@@ -7,7 +7,7 @@ import {
   readDecodedBoundaryCalibration,
   readRobotCalibration,
   resetCalibration,
-} from "./calibration.js?v=137";
+} from "./calibration.js?v=138";
 
 const ENTITY_MAP = {
   battery: ["sensor", ["battery_level"]],
@@ -182,7 +182,7 @@ class AnthbotMapCard extends HTMLElement {
       .join(" ");
     root.innerHTML = `
       <ha-card class="${cardClasses}">
-        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=137")}">
+        <link rel="stylesheet" href="${this.resolveAsset("styles.css?v=138")}">
         <style>
           .anthbot-menu-toggle { position:absolute; z-index:40; min-height:46px; padding:9px 15px; border:1px solid rgba(255,255,255,.38); border-radius:999px; background:rgba(10,18,26,.48); color:#fff; backdrop-filter:blur(10px); box-shadow:0 8px 28px rgba(0,0,0,.26); font:inherit; font-weight:800; cursor:pointer; }
           .anthbot-menu-toggle { right:14px; bottom:14px; }
@@ -481,6 +481,7 @@ class AnthbotMapCard extends HTMLElement {
       path_binary_paths: attributes.path_binary_paths,
       mower_status: this.getRelatedEntity("status")?.state || attributes.mower_status || this.entity.state,
       robot_status_raw: attributes.robot_status_raw,
+      charging: this.getRelatedEntity("charging")?.state === "on",
       history_path_live_refresh: attributes.history_path_live_refresh,
       area_definition: attributes.area_definition,
     });

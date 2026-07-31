@@ -1,4 +1,4 @@
-﻿import { createGeometry, getBoundaryPaths, getWorldBounds, getZonePoints, getZones } from "./geometry.js?v=137";
+﻿import { createGeometry, getBoundaryPaths, getWorldBounds, getZonePoints, getZones } from "./geometry.js?v=138";
 
 const COLORS = Object.freeze({
   background: "#18202a",
@@ -210,6 +210,13 @@ export class AnthbotMapRenderer {
 
   drawMowedPath(ctx, geometry) {
     if (this.options.showMowedPath === false) {
+      return;
+    }
+    // Match the official app: a completed route must not remain painted while
+    // the mower is returning to, docked at, or charging on the station.  The
+    // cloud can keep the previous path payload after the task has ended, so
+    // checking only whether path points exist would display stale coverage.
+    if (isDockingOrChargingState(this.state)) {
       return;
     }
 
@@ -1355,6 +1362,16 @@ function isDockingOrChargingStateValue(value) {
     "toltes",
     "dokkol",
   ].some((item) => status.includes(item));
+}
+
+function isDockingOrChargingState(state = {}) {
+  return (
+    state?.charging === true ||
+    String(state?.charging || "").toLowerCase() === "on" ||
+    isDockingOrChargingStateValue(state?.mower_status) ||
+    isDockingOrChargingStateValue(state?.robot_status_raw) ||
+    isDockingOrChargingStateValue(state?.robot_sta)
+  );
 }
 
 function isLiveMowingState(state = {}) {
