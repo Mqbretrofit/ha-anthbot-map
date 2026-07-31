@@ -1,4 +1,4 @@
-import { TRANSLATION_COMPLEMENTS } from "./i18n-complements.js?v=137";
+import { TRANSLATION_COMPLEMENTS } from "./i18n-complements.js?v=138";
 
 export const LANGUAGES = [
   ["auto", "Automatic / Automatikus"],
