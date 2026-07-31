@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.64 / map card v138 — 2026-07-31
+
+### Fixed
+
+- A térképkártya a gyári Anthbot alkalmazással egyezően elrejti az előző
+  nyírás útvonalát, amikor a robot visszatér a dokkolóhoz vagy tölt.
+- A töltés bináris szenzora is bekerül a térkép megjelenítési állapotába, így a
+  felhőben maradt régi útvonaladat nem jelenik meg aktív nyírásként.
+
+### Changed
+
+- A Lovelace-erőforrás gyorsítótár-verziója `v138`.
+
 ## 1.0.63 — 2026-07-31
 
 ### Fixed
