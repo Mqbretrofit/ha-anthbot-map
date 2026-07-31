@@ -15,6 +15,8 @@
   hitelesítő nem kerül újra felhasználásra.
 - A napló az egyes átmeneti próbálkozásokat csak debug szinten jelzi, és warning
   bejegyzést csak a próbálkozások kimerülése után ír.
+- A `hacs.json` ismét megfelel a jelenlegi HACS-sémának, és az integráció
+  tartalmazza a HACS által elvárt helyi márkaikont.
 
 ## 1.0.62 — 2026-07-30
 

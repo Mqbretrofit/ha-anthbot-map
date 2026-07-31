@@ -14,6 +14,8 @@
   felhasználásra.
 - Az egyes átmeneti próbálkozások csak debug szinten kerülnek a naplóba; warning
   bejegyzés a próbálkozások kimerülése után készül.
+- A `hacs.json` ismét megfelel a jelenlegi HACS-sémának, és az integráció
+  tartalmazza a HACS által elvárt helyi márkaikont.
 
 ## Ellenőrzés
 
