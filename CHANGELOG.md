@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.63 — 2026-07-31
+
+### Fixed
+
+- Az AWS IoT STS-hitelesítők lekérése 500, 502, 503, 504, hálózati hiba és
+  időtúllépés esetén legfeljebb háromszor próbálkozik, 1 és 3 másodperces
+  várakozással.
+- Az integráció csak 401/403 hitelesítési hibánál jelentkezik be újra az
+  Anthbot-fiókba; átmeneti szerverhibánál nem terheli felesleges
+  bejelentkezésekkel a felhőt.
+- Korai STS-frissítési hiba esetén a még ténylegesen le nem járt gyorsítótárazott
+  hitelesítő használható marad, de lejárt vagy az AWS által már elutasított
+  hitelesítő nem kerül újra felhasználásra.
+- A napló az egyes átmeneti próbálkozásokat csak debug szinten jelzi, és warning
+  bejegyzést csak a próbálkozások kimerülése után ír.
+
 ## 1.0.62 — 2026-07-30
 
 ### Fixed
