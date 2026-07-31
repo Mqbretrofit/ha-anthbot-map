@@ -32,12 +32,39 @@ from .const import (
 # Refresh STS creds this many seconds before declared expiration.
 _CREDENTIALS_REFRESH_BUFFER_SECONDS = 60
 _CREDENTIALS_FALLBACK_TTL_SECONDS = 45 * 60
+_IOT_CREDENTIAL_RETRY_DELAYS_SECONDS = (1, 3)
+_RETRYABLE_HTTP_STATUS_CODES = frozenset({500, 502, 503, 504})
+_AUTHENTICATION_HTTP_STATUS_CODES = frozenset({401, 403})
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class AnthbotGenieApiError(HomeAssistantError):
     """Raised when the Anthbot API request fails."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int | None = None,
+        temporary: bool = False,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.temporary = temporary
+
+    @property
+    def is_authentication_error(self) -> bool:
+        """Return whether the server rejected the current authentication."""
+        return self.status_code in _AUTHENTICATION_HTTP_STATUS_CODES
+
+    @property
+    def is_temporary(self) -> bool:
+        """Return whether repeating the request may recover automatically."""
+        return (
+            self.temporary
+            or self.status_code in _RETRYABLE_HTTP_STATUS_CODES
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -713,7 +740,9 @@ class AnthbotCloudApiClient:
                 if resp.status != 200:
                     body = await resp.text()
                     raise AnthbotGenieApiError(
-                        f"Login failed ({resp.status}): {body[:300]}"
+                        f"Login failed ({resp.status}): {body[:300]}",
+                        status_code=resp.status,
+                        temporary=resp.status in _RETRYABLE_HTTP_STATUS_CODES,
                     )
                 data = await resp.json(content_type=None)
         except ClientError as err:
@@ -894,13 +923,21 @@ class AnthbotCloudApiClient:
                 if resp.status != 200:
                     body = await resp.text()
                     raise AnthbotGenieApiError(
-                        f"IoT STS failed ({resp.status}): {body[:300]}"
+                        f"IoT STS failed ({resp.status}): {body[:300]}",
+                        status_code=resp.status,
+                        temporary=resp.status in _RETRYABLE_HTTP_STATUS_CODES,
                     )
                 response_payload = await resp.json(content_type=None)
         except ClientError as err:
-            raise AnthbotGenieApiError(f"Network error: {err}") from err
+            raise AnthbotGenieApiError(
+                f"Network error: {err}",
+                temporary=True,
+            ) from err
         except TimeoutError as err:
-            raise AnthbotGenieApiError("Request timed out") from err
+            raise AnthbotGenieApiError(
+                "Request timed out",
+                temporary=True,
+            ) from err
 
         if not isinstance(response_payload, dict):
             raise AnthbotGenieApiError("Invalid IoT STS payload type")
@@ -1246,6 +1283,52 @@ class AnthbotShadowApiClient:
         # expiration is unix seconds; allow refresh buffer
         return creds.expiration - int(time.time()) > _CREDENTIALS_REFRESH_BUFFER_SECONDS
 
+    def _credentials_are_usable(
+        self, creds: AnthbotTemporaryIotCredentials | None
+    ) -> bool:
+        """Return whether cached credentials have not actually expired yet."""
+        if creds is None:
+            return False
+        if creds.expiration is None:
+            return (
+                self._credentials_acquired_at is not None
+                and time.time() - self._credentials_acquired_at
+                < _CREDENTIALS_FALLBACK_TTL_SECONDS
+            )
+        return creds.expiration > int(time.time())
+
+    async def _async_fetch_iot_credentials_with_retry(
+        self,
+    ) -> AnthbotTemporaryIotCredentials:
+        """Fetch IoT credentials, retrying only temporary cloud failures."""
+        if self._account_client is None:
+            raise AnthbotGenieApiError(
+                "Anthbot account client is required for temporary IoT credentials"
+            )
+
+        attempt_count = len(_IOT_CREDENTIAL_RETRY_DELAYS_SECONDS) + 1
+        for attempt in range(attempt_count):
+            try:
+                return await self._account_client.async_get_device_iot_credentials(
+                    self._serial_number
+                )
+            except AnthbotGenieApiError as err:
+                if not err.is_temporary or attempt >= attempt_count - 1:
+                    raise
+                delay = _IOT_CREDENTIAL_RETRY_DELAYS_SECONDS[attempt]
+                _LOGGER.debug(
+                    "Temporary Anthbot IoT credential failure for %s "
+                    "(attempt %d/%d); retrying in %d seconds: %s",
+                    self._serial_number,
+                    attempt + 1,
+                    attempt_count,
+                    delay,
+                    err,
+                )
+                await asyncio.sleep(delay)
+
+        raise AnthbotGenieApiError("IoT credential retry loop exhausted")
+
     async def async_request_all_properties(self) -> None:
         """Compatibility hook used after service commands."""
         await self.async_publish_service_command(cmd="app_state", data=1)
@@ -1263,30 +1346,46 @@ class AnthbotShadowApiClient:
             if not force_refresh and self._credentials_are_valid(self._credentials):
                 return self._credentials
             try:
-                creds = await self._account_client.async_get_device_iot_credentials(
-                    self._serial_number
-                )
+                creds = await self._async_fetch_iot_credentials_with_retry()
             except AnthbotGenieApiError as err:
-                _LOGGER.warning(
-                    "Failed to refresh IoT credentials for %s; re-authenticating the Anthbot account: %s",
-                    self._serial_number,
-                    err,
-                )
-                try:
-                    await self._account_client.async_reauthenticate()
-                    creds = await self._account_client.async_get_device_iot_credentials(
-                        self._serial_number
-                    )
-                except AnthbotGenieApiError as retry_err:
-                    _LOGGER.warning(
-                        "Anthbot account re-authentication or IoT credential retry failed for %s: %s",
+                if err.is_authentication_error:
+                    _LOGGER.debug(
+                        "Anthbot IoT credentials request was rejected for %s; "
+                        "re-authenticating the account once",
                         self._serial_number,
-                        retry_err,
                     )
-                    # If we had stale creds, return them as a last-ditch attempt.
-                    if self._credentials is not None:
+                    try:
+                        await self._account_client.async_reauthenticate()
+                        creds = await self._async_fetch_iot_credentials_with_retry()
+                    except AnthbotGenieApiError as retry_err:
+                        err = retry_err
+                    else:
+                        err = None
+
+                if err is not None:
+                    # During an early refresh, credentials inside the refresh
+                    # buffer can still work until their actual expiration.
+                    # Never reuse credentials after a forced refresh: that path
+                    # is entered because AWS has already rejected them.
+                    if (
+                        err.is_temporary
+                        and not force_refresh
+                        and self._credentials_are_usable(self._credentials)
+                    ):
+                        _LOGGER.warning(
+                            "Unable to refresh Anthbot IoT credentials for %s; "
+                            "using cached credentials until their expiration: %s",
+                            self._serial_number,
+                            err,
+                        )
                         return self._credentials
-                    raise
+                    _LOGGER.warning(
+                        "Unable to obtain Anthbot IoT credentials for %s "
+                        "after retries: %s",
+                        self._serial_number,
+                        err,
+                    )
+                    raise err
             self._credentials = creds
             self._credentials_acquired_at = time.time()
             # Reuse the endpoint/region the cloud sent us if available — they
