@@ -1,4 +1,4 @@
-﻿import { createGeometry, getBoundaryPaths, getWorldBounds, getZonePoints, getZones } from "./geometry.js?v=138";
+import { createGeometry, getBoundaryPaths, getWorldBounds, getZonePoints, getZones } from "./geometry.js?v=138";
 
 const COLORS = Object.freeze({
   background: "#18202a",
@@ -50,7 +50,9 @@ export class AnthbotMapRenderer {
     this.pointers = new Map();
     this.pinch = null;
     this.decodedBoundaryCalibration = options.decodedBoundaryCalibration || {};
-    this.restoreLiveMowedPath();
+    if (!this.isCloudOnlyMowedPath()) {
+      this.restoreLiveMowedPath();
+    }
 
     this.onPointerDown = this.onPointerDown.bind(this);
     this.onPointerMove = this.onPointerMove.bind(this);
@@ -76,7 +78,11 @@ export class AnthbotMapRenderer {
     const previousMowedPathStorageKey = this.mowedPathStorageKey;
     this.options = { ...this.options, ...options };
     this.mowedPathStorageKey = this.options.mowedPathStorageKey || null;
-    if (this.mowedPathStorageKey !== previousMowedPathStorageKey) {
+    if (this.isCloudOnlyMowedPath()) {
+      this.liveMowedPath = [];
+      this.persistedMowedPath = [];
+      this.lastTrailPoint = null;
+    } else if (this.mowedPathStorageKey !== previousMowedPathStorageKey) {
       this.restoreLiveMowedPath();
     }
     if (options.decodedBoundaryCalibration) {
@@ -92,11 +98,17 @@ export class AnthbotMapRenderer {
 
   setState(state = {}) {
     this.state = state;
-    this.updateMowedPathSession(state);
-    this.updateLiveMowedPath(state);
+    if (!this.isCloudOnlyMowedPath()) {
+      this.updateMowedPathSession(state);
+      this.updateLiveMowedPath(state);
+    }
     this.loadImage(this.options.image);
     this.loadRobotImage(this.options.robotImage);
     this.draw();
+  }
+
+  isCloudOnlyMowedPath() {
+    return String(this.options.mowedPathSource || "auto").toLowerCase() === "cloud";
   }
 
   setCalibration(calibration) {
@@ -221,9 +233,12 @@ export class AnthbotMapRenderer {
     }
 
     const pathSource = String(this.options.mowedPathSource || "auto").toLowerCase();
+    const cloudOnly = pathSource === "cloud";
     const cloudTrail = pathSource === "live" ? [] : extractCloudMowedPathPoints(this.state);
-    const baseTrail = cloudTrail.length >= 2 ? cloudTrail : this.persistedMowedPath;
-    const liveTrail = this.liveMowedPath;
+    const baseTrail = cloudOnly
+      ? cloudTrail
+      : (cloudTrail.length >= 2 ? cloudTrail : this.persistedMowedPath);
+    const liveTrail = cloudOnly ? [] : this.liveMowedPath;
     const hasCloudTrail = pathSource !== "live" && baseTrail?.length >= 1;
     const hasLiveTrail = liveTrail?.length >= 1;
     if (!hasCloudTrail && !hasLiveTrail) {
