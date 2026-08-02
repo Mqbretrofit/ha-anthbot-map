@@ -61,6 +61,18 @@ def _as_int(value: Any) -> int | None:
     return None
 
 
+def _battery_level(data: dict[str, Any]) -> int | None:
+    """Return a validated battery percentage for all known payload formats."""
+    raw_value = data.get("elec")
+    if isinstance(raw_value, dict):
+        raw_value = raw_value.get("value")
+
+    value = _as_int(raw_value)
+    if value is None or not 0 <= value <= 100:
+        return None
+    return value
+
+
 def _as_datetime(value: Any) -> datetime | None:
     """Parse Unix-epoch integers and 'YYYYMMDDHHMMSS' strings to UTC datetimes."""
     if isinstance(value, (int, float)) and value > 0:
@@ -244,7 +256,7 @@ SENSORS: tuple[AnthbotSensorDescription, ...] = (
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda data: data.get("elec", {}).get("value") if isinstance(data.get("elec"), dict) else data.get("elec"),
+        value_fn=_battery_level,
     ),
     AnthbotSensorDescription(
         key="voice_volume",
