@@ -244,7 +244,7 @@ SENSORS: tuple[AnthbotSensorDescription, ...] = (
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda data: data.get("elec"),
+        value_fn=lambda data: data.get("elec", {}).get("value") if isinstance(data.get("elec"), dict) else data.get("elec"),
     ),
     AnthbotSensorDescription(
         key="voice_volume",
