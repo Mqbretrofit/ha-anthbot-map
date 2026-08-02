@@ -1,4 +1,4 @@
-import { AnthbotMapRenderer } from "./renderer.js?v=138";
+import { AnthbotMapRenderer } from "./renderer.js?v=140";
 import { LANGUAGES, resolveLanguage, translate } from "./i18n.js?v=138";
 import {
   adjustCalibration,
@@ -893,12 +893,14 @@ class AnthbotMapCard extends HTMLElement {
       robotMowingHeadingOffset: this.config.robot_mowing_heading_offset ?? this.config.robotMowingHeadingOffset,
       showMowedPath: this.config.show_mowed_path !== false,
       showMowedCoverage: this.config.show_mowed_coverage !== false && this.config.showMowedCoverage !== false,
-      mowedPathSource: this.config.mowed_path_source || this.config.mowedPathSource,
+      // The official Anthbot app renders the downloaded cloud task path.  Do
+      // not mix it with a browser-generated live trail or a cached fallback.
+      mowedPathSource: "cloud",
       mowedPathColor: this.config.mowed_path_color || this.config.mowedPathColor,
       mowedPathWidth: this.config.mowed_path_width ?? this.config.mowedPathWidth,
       mowedCoverageColor: this.config.mowed_coverage_color || this.config.mowedCoverageColor,
       mowedCoverageWidth: this.config.mowed_coverage_width ?? this.config.mowedCoverageWidth,
-      mowedPathStorageKey: this.mowedPathStorageKey(),
+      mowedPathStorageKey: null,
       showBoundary: this.config.show_boundary !== false,
       showLegacyBoundary: this.config.show_legacy_boundary === true || this.config.showLegacyBoundary === true,
       showDecodedBoundary: this.showDecodedBoundary,
