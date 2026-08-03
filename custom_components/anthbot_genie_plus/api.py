@@ -8,10 +8,12 @@ from datetime import datetime, timezone
 import gzip
 import hashlib
 import hmac
+import io
 import json
 import logging
 import re
 import struct
+import tarfile
 import time
 from typing import Any
 import uuid
@@ -130,6 +132,8 @@ def decode_device_definition(raw_bytes: bytes, label: str) -> dict[str, Any] | l
 
     if "map" in label.lower():
         map_raster = _decode_map_raster(raw_bytes)
+        if map_raster is None:
+            map_raster = _decode_map_archive(raw_bytes)
         if map_raster is not None:
             return {
                 "_map_raster": map_raster,
@@ -332,6 +336,103 @@ def _decode_map_raster(raw_bytes: bytes) -> dict[str, Any] | None:
         },
         "values": _byte_counts(pixels),
         "runs": _rle_encode_bytes(pixels),
+    }
+
+
+def _decode_map_archive(raw_bytes: bytes) -> dict[str, Any] | None:
+    """Decode the app-style multi_maps archive (tar/gzip) for M5/M9 mowers.
+
+    The archive holds a raw navigation raster at ``maps/remote_map_navi.map``
+    (one byte per pixel), JSON metadata at ``maps/remote_map.json`` with a
+    ``navi_map`` object carrying ``width``/``height``/``resolution``/``x_min``/
+    ``y_min``, and an optional already-mowed raster at ``maps/rtk_mask_map``.
+    """
+    if not raw_bytes:
+        return None
+
+    tar_bytes = raw_bytes
+    if raw_bytes.startswith(b"\x1f\x8b"):
+        try:
+            tar_bytes = gzip.decompress(raw_bytes)
+        except (OSError, EOFError, zlib.error):
+            return None
+    elif raw_bytes[257:262] != b"ustar":
+        try:
+            decompressed = zlib.decompress(raw_bytes)
+            if decompressed[257:262] == b"ustar":
+                tar_bytes = decompressed
+        except zlib.error:
+            pass
+
+    members: dict[str, bytes] = {}
+    try:
+        with tarfile.open(fileobj=io.BytesIO(tar_bytes), mode="r:") as archive:
+            for member in archive.getmembers():
+                if not member.isfile():
+                    continue
+                base_name = member.name.rsplit("/", 1)[-1]
+                if base_name == "remote_map_navi.map":
+                    members["pixels"] = archive.extractfile(member).read()
+                elif base_name == "remote_map.json":
+                    members["metadata"] = archive.extractfile(member).read()
+                elif base_name == "rtk_mask_map":
+                    members["rtk_mask"] = archive.extractfile(member).read()
+    except (tarfile.TarError, OSError, EOFError, zlib.error, ValueError):
+        return None
+
+    pixels = members.get("pixels")
+    metadata_bytes = members.get("metadata")
+    if not pixels or not metadata_bytes:
+        return None
+    try:
+        metadata = json.loads(metadata_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(metadata, dict):
+        return None
+    navi_map = metadata.get("navi_map")
+    if not isinstance(navi_map, dict):
+        return None
+    try:
+        width = int(navi_map["width"])
+        height = int(navi_map["height"])
+        resolution = float(navi_map["resolution"])
+        x_min = float(navi_map["x_min"])
+        y_min = float(navi_map["y_min"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if (
+        width <= 0
+        or height <= 0
+        or resolution <= 0
+        or len(pixels) != width * height
+        or width * height > 8_000_000
+    ):
+        return None
+
+    # The HA card draws raster rows in the archive's own order, so the raw
+    # pixels are used as-is.
+    raster_bytes = bytes(pixels)
+
+    min_x = x_min * 1000.0
+    min_y = y_min * 1000.0
+    max_x = min_x + width * resolution * 1000.0
+    max_y = min_y + height * resolution * 1000.0
+
+    return {
+        "encoding": "multi_maps_tar_gz",
+        "width": width,
+        "height": height,
+        "resolution": round(resolution, 6),
+        "bounds": {
+            "min_x": round(min_x, 3),
+            "max_x": round(max_x, 3),
+            "min_y": round(min_y, 3),
+            "max_y": round(max_y, 3),
+        },
+        "values": _byte_counts(raster_bytes),
+        "runs": _rle_encode_bytes(raster_bytes),
+        "metadata": metadata,
     }
 
 
@@ -1140,6 +1241,31 @@ class AnthbotCloudApiClient:
             file_prefix="map",
             sub_category="map",
         )
+
+    async def async_get_device_map_archive(
+        self, serial_number: str, map_file_name: str | None = None
+    ) -> dict[str, Any]:
+        """Fetch the app-style multi_maps archive (tar/gzip) for M5/M9 mowers.
+
+        The map file name normally comes from the device shadow's
+        ``multi_maps.map_list`` entry (for example ``map_<serial>_0``). The
+        archive is a binary tar/gzip payload, decoded by
+        :func:`_decode_map_archive`.
+        """
+        filename = map_file_name or f"map_{serial_number}_0"
+        definition = await self.async_get_device_json_file(
+            serial_number,
+            file_prefix="map",
+            sub_category="multi_maps",
+            filename=filename,
+        )
+        if not isinstance(definition, dict) or not isinstance(
+            definition.get("_map_raster"), dict
+        ):
+            raise AnthbotGenieApiError(
+                "multi_maps map archive decode produced no raster"
+            )
+        return definition
 
     async def async_get_device_path_definition(
         self, serial_number: str

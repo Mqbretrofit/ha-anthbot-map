@@ -120,6 +120,44 @@ def is_robot_online(data: dict[str, Any], max_age_seconds: int = 30) -> bool:
     return is_robot_shadow_fresh(data, max_age_seconds=max_age_seconds)
 
 
+def _select_map_file(data: dict[str, Any]) -> tuple[str | None, str | None]:
+    """Return the active multi_maps archive name and md5 from the shadow.
+
+    The map file name comes from the device's ``multi_maps.map_list`` entries
+    (for example ``map_<serial>_0``). The entry whose ``map_id`` matches the
+    latest ``map_tar_time``/``map_time`` wins; otherwise the first entry is
+    used. Returns ``(map_file_name, md5)`` or ``(None, None)`` when the shadow
+    exposes no multi_maps list.
+    """
+    multi_maps = data.get("multi_maps")
+    if isinstance(multi_maps, dict):
+        map_list = multi_maps.get("map_list")
+    else:
+        map_list = None
+    if not isinstance(map_list, list):
+        return None, None
+    active_ids = [
+        str(value)
+        for key in ("map_tar_time", "map_time")
+        if isinstance((value := data.get(key)), (str, int))
+    ]
+    entries = [
+        item
+        for item in map_list
+        if isinstance(item, dict)
+        and isinstance(item.get("map_file_name"), str)
+        and item["map_file_name"]
+    ]
+    if not entries:
+        return None, None
+    entry = next(
+        (item for item in entries if str(item.get("map_id")) in active_ids),
+        entries[0],
+    )
+    md5 = entry.get("md5")
+    return entry["map_file_name"], str(md5) if isinstance(md5, str) and md5 else None
+
+
 class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Coordinator to fetch and cache Anthbot shadow state."""
 
@@ -150,6 +188,7 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._history_path_source: str | None = None
         self._last_area_time: str | None = None
         self._last_map_time: str | None = None
+        self._last_map_key: str | None = None
         self._last_path_time: str | None = None
         self._last_history_path_request: str | None = None
         self._last_history_path_request_monotonic = 0.0
@@ -202,6 +241,9 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             map_time = property_state.get("map_time")
             if not isinstance(map_time, str):
                 map_time = None
+            map_tar_time = property_state.get("map_tar_time")
+            if not isinstance(map_tar_time, str):
+                map_tar_time = None
             path_time = property_state.get("path_time")
             if not isinstance(path_time, str):
                 path_time = None
@@ -228,22 +270,46 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     if not self._area_definition:
                         self._area_definition = {}
 
-            should_refresh_map = self._map_definition is None or (
-                map_time is not None and map_time != self._last_map_time
+            map_file_name, map_md5 = _select_map_file(property_state)
+            map_key = "|".join(
+                part
+                for part in (map_tar_time, map_time, map_file_name, map_md5)
+                if part is not None
+            ) or f"map_{self.client.serial_number}_0"
+
+            should_refresh_map = (
+                self._map_definition is None
+                or self._map_definition_error is not None
+                or map_key != self._last_map_key
             )
             if should_refresh_map:
                 try:
-                    self._map_definition = (
-                        await self.account_client.async_get_device_map_definition(
-                            self.client.serial_number
+                    try:
+                        self._map_definition = (
+                            await self.account_client.async_get_device_map_archive(
+                                self.client.serial_number,
+                                map_file_name,
+                            )
                         )
-                    )
+                    except AnthbotGenieApiError as archive_err:
+                        _LOGGER.debug(
+                            "Anthbot multi_maps map archive unavailable for %s (%s); "
+                            "falling back to legacy map definition",
+                            self.client.serial_number,
+                            archive_err,
+                        )
+                        self._map_definition = (
+                            await self.account_client.async_get_device_map_definition(
+                                self.client.serial_number
+                            )
+                        )
                     _LOGGER.warning(
                         "ANTHBOT MAP DEFINITION:\n%s",
                         self._map_definition,
                     )
                     self._map_definition_error = None
                     self._last_map_time = map_time
+                    self._last_map_key = map_key
                 except Exception as err:  # noqa: BLE001 - discovery probe must never break polling.
                     _LOGGER.debug(
                         "Anthbot map definition unavailable for %s: %s",
@@ -254,6 +320,7 @@ class AnthbotGenieDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     if self._map_definition is None:
                         self._map_definition = {}
                     self._last_map_time = map_time
+                    self._last_map_key = map_key
 
             should_refresh_path = (
                 self._path_definition is None
