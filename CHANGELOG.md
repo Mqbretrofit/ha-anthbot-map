@@ -1,5 +1,63 @@
 # Changelog
 
+## 1.0.68 — 2026-08-04
+
+### Fixed
+
+- A fő `CHANGELOG.md` ismét teljes: bekerültek az 1.0.65, 1.0.66 és 1.0.67
+  kiadások korábban külön fájlban szereplő változásai.
+- A teljes telepítő ZIP már a naprakész fő változásnaplót tartalmazza.
+
+## 1.0.67 — 2026-08-04
+
+### Added
+
+- Az M5 és M9 LiDAR modellek térképe az alkalmazással azonos `multi_maps`
+  archívumból töltődik le.
+- A dekóder kezeli a nyers TAR, gzip és zlib tömörítésű térképarchívumokat.
+- A térképfájl kiválasztása a készülékfelhő `multi_maps.map_list` adatai alapján
+  történik.
+- A térkép a fájl, az időbélyeg vagy az MD5 változásakor automatikusan frissül.
+- Hiányzó vagy átmenetileg hibás térkép esetén az integráció minden lekérdezési
+  ciklusban újrapróbálkozik.
+- A korábbi Genie modellek régi térképformátumának támogatása megmaradt.
+
+### Testing
+
+- Tizenhárom automatikus teszt ellenőrzi a nyers TAR, gzip és zlib archívumokat,
+  valamint a hibás és hiányos bemenetek kezelését.
+
+### Contributors
+
+- Köszönet @ndoty közreműködéséért, az M5 készüléken végzett ellenőrzésért és a
+  tesztekért.
+
+## 1.0.66 — 2026-08-02
+
+### Fixed
+
+- Az M5 Lidar modellek `elec: {"value": ...}` akkumulátor-adatformátuma
+  támogatott.
+- A korábbi modellek közvetlen `elec: 85` formátuma továbbra is működik.
+- Az akkumulátorérték egységesen egész számmá alakul.
+- A hiányzó, hibás vagy 0–100 tartományon kívüli érték nem hoz létre érvénytelen
+  Home Assistant szenzorállapotot.
+- A feldolgozás külön, tesztelhető `_battery_level()` függvénybe került.
+
+## 1.0.65 / map card v140 — 2026-08-02
+
+### Fixed
+
+- A nyírt terület kizárólag az Anthbot-felhőből letöltött munkamenetet használja,
+  ugyanazt az adatforrást, mint a gyári alkalmazás.
+- Cloud módban megszűnt a böngészőben tárolt korábbi nyomvonal visszatöltése és
+  a robot helyzetéből lokálisan felépített élő útvonal rárajzolása.
+- A felhős és a helyi útvonal többé nem kerül összefésülésre.
+
+### Changed
+
+- A Lovelace-erőforrás gyorsítótár-verziója `v140`.
+
 ## 1.0.64 / map card v138 — 2026-07-31
 
 ### Fixed
