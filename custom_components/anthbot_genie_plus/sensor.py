@@ -64,7 +64,12 @@ def _as_int(value: Any) -> int | None:
 def _battery_level(data: dict[str, Any]) -> int | None:
     """Return a validated battery percentage for all known payload formats."""
     raw_value = data.get("elec")
-    if isinstance(raw_value, dict):
+    seen_wrappers: set[int] = set()
+    while isinstance(raw_value, dict):
+        wrapper_id = id(raw_value)
+        if wrapper_id in seen_wrappers:
+            return None
+        seen_wrappers.add(wrapper_id)
         raw_value = raw_value.get("value")
 
     value = _as_int(raw_value)
