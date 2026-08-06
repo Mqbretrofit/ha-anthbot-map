@@ -9,5 +9,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Mqbretrofit/ha-anthbot-map/issues",
   "requirements": [],
-  "version": "1.0.68"
+  "version": "1.0.69"
 }
