@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.69 — 2026-08-06
+
+### Fixed
+
+- Az M9 időbélyeges, kétszeresen beágyazott akkumulátoradata helyesen
+  százalékértékké alakul.
+- Az akkumulátorfeldolgozó tetszőleges számú `value` burkolót biztonságosan
+  kibont, és ciklikus vagy hibás adatnál `None` értéket ad.
+- A régi közvetlen, az M5 egyszeresen beágyazott és az M9 kétszeresen
+  beágyazott akkumulátorformátuma egyaránt támogatott.
+
+### Testing
+
+- Új regressziós tesztek ellenőrzik a Genie, M5 és M9 formátumot, a szöveges
+  számot, a hiányzó és tartományon kívüli értékeket, valamint a ciklikus
+  burkolót.
+
 ## 1.0.68 — 2026-08-04
 
 ### Fixed
