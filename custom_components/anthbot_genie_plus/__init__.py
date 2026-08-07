@@ -62,6 +62,7 @@ PLATFORMS = [
     "number",
     "switch",
     "device_tracker",
+    "lawn_mower",
 ]
 _LOGGER = logging.getLogger(__name__)
 VALID_MOW_HEIGHTS = list(range(30, 75, 5))
