@@ -14,6 +14,17 @@ származik; nem azok kiegészítője. Több Anthbot-integráció párhuzamos has
 nem javasolt, mert duplikált entitásokat és egymással versengő
 felhőkapcsolatokat okozhat.
 
+> [!CAUTION]
+> **Ne használd ezt az integrációt párhuzamosan a
+> `vincentjanv/anthbot_genie_ha`, az AdrianTIonut fork vagy más Anthbot
+> Home Assistant-integráció mellett!**
+> A párhuzamos telepítés duplikált eszközöket és entitásokat, egymással
+> versengő felhőkapcsolatokat, valamint ütköző robotparancsokat okozhat.
+> Először távolítsd el a régi Anthbot-integrációt a **Beállítások → Eszközök és
+> szolgáltatások** alatt és a HACS-ból, indítsd újra a Home Assistantot, majd
+> telepítsd ezt az integrációt. A meglévő irányítópultokon és
+> automatizálásokban szükség lehet az entitásazonosítók átírására.
+
 > Ez a projekt nem áll kapcsolatban az Anthbottal. A forrásokról és a
 > védjegyekről a [NOTICE.md](NOTICE.md) fájlban olvashatsz.
 
