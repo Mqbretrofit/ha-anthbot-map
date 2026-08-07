@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.0.70 — 2026-08-07
+
+### Added
+
+- Minden Anthbot robothoz létrejön egy natív Home Assistant `lawn_mower`
+  entitás.
+- A natív entitásról elindítható a teljes nyírás, leállítható az aktuális
+  feladat, és a robot visszaküldhető a töltőre.
+- A robot felhőállapota a Home Assistant szabványos nyírás, dokkolás, szünet,
+  visszatérés és hiba állapotaira képeződik le.
+
+### Compatibility
+
+- A Genie, M5 és M9 közvetlen, számozott, egyszeresen és többszörösen
+  beágyazott státuszformátumai támogatottak.
+- Az összes korábbi szolgáltatás, zónanyírás, zónagomb, szenzor, kapcsoló és
+  térképfunkció változatlanul elérhető marad.
+
+### Documentation
+
+- Kiemelt figyelmeztetés jelzi, hogy más Anthbot-integrációval nem ajánlott
+  párhuzamosan használni, mert duplikált entitásokat, egymással versengő
+  felhőkapcsolatokat és ütköző parancsokat okozhat.
+- A magyar és angol telepítési leírás egyértelműsíti a régi integráció
+  eltávolítását és az esetleg megváltozó entitásazonosítókat.
+
+### Testing
+
+- Új regressziós tesztek ellenőrzik a natív fűnyíró állapotleképezését,
+  beleértve az M-szériás beágyazott adatokat és a hibaállapot elsőbbségét.
+
 ## 1.0.69 — 2026-08-06
 
 ### Fixed
