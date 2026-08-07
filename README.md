@@ -13,6 +13,15 @@ projects; it is not an add-on for them. Do not run multiple Anthbot integrations
 in parallel, because they can create duplicate entities and competing cloud
 sessions.
 
+> [!CAUTION]
+> **Do not run this integration in parallel with `vincentjanv/anthbot_genie_ha`,
+> the AdrianTIonut fork, or another Anthbot Home Assistant integration.**
+> Parallel installations can create duplicate devices and entities, open
+> competing cloud sessions, and send conflicting commands to the same mower.
+> Remove the old Anthbot integration from **Settings → Devices & services** and
+> HACS, restart Home Assistant, and then install this integration. Existing
+> dashboards and automations may need their entity IDs updated.
+
 The project combines cloud telemetry and mower control with a custom Lovelace
 card that can place the live Anthbot map, zones, mowing trail, charger, and
 robot on a top-down photograph of the garden.
