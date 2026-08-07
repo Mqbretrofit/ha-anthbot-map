@@ -8,6 +8,11 @@
 Unofficial Home Assistant integration and photo-backed map card for Anthbot
 Genie robotic lawn mowers.
 
+This is a standalone integration derived from the credited MIT-licensed
+projects; it is not an add-on for them. Do not run multiple Anthbot integrations
+in parallel, because they can create duplicate entities and competing cloud
+sessions.
+
 The project combines cloud telemetry and mower control with a custom Lovelace
 card that can place the live Anthbot map, zones, mowing trail, charger, and
 robot on a top-down photograph of the garden.
@@ -19,6 +24,7 @@ robot on a top-down photograph of the garden.
 
 - Anthbot cloud login from the Home Assistant UI
 - support for multiple mowers on one account
+- native Home Assistant `lawn_mower` entity with start, stop/pause, and dock controls
 - battery, mower status, charging, RTK, network, firmware, maintenance, map,
   zone, error, and diagnostic entities
 - full-lawn, manual-zone, and automatic-zone mowing controls
