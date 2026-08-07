@@ -9,6 +9,11 @@ Nem hivatalos Home Assistant-integráció és fényképalapú térképkártya az
 Anthbot Genie robotfűnyírókhoz. A robotot, a zónákat, a tiltott területeket,
 a töltőt és a megtett útvonalat a kert saját felülnézeti fényképén jeleníti meg.
 
+Ez egy önálló integráció, amely a feltüntetett MIT-licencű projektekből
+származik; nem azok kiegészítője. Több Anthbot-integráció párhuzamos használata
+nem javasolt, mert duplikált entitásokat és egymással versengő
+felhőkapcsolatokat okozhat.
+
 > Ez a projekt nem áll kapcsolatban az Anthbottal. A forrásokról és a
 > védjegyekről a [NOTICE.md](NOTICE.md) fájlban olvashatsz.
 
@@ -16,6 +21,8 @@ a töltőt és a megtett útvonalat a kert saját felülnézeti fényképén jel
 
 - Anthbot-felhő bejelentkezés a Home Assistant felületén
 - több fűnyíró támogatása egy Anthbot-fiókkal
+- natív Home Assistant `lawn_mower` entitás indítás, leállítás/szüneteltetés
+  és dokkolás vezérléssel
 - akkumulátor-, állapot-, töltés-, RTK-, hálózat-, firmware-, karbantartási-,
   térkép-, zóna-, hiba- és diagnosztikai entitások
 - teljes terület, kézi zóna és automatikus zóna nyírása
