@@ -12,10 +12,10 @@ permissions:
 
 jobs:
   release:
-    if: startsWith(github.ref, 'refs/tags/') || contains(github.event.head_commit.message, '[release v1.0.69]')
+    if: startsWith(github.ref, 'refs/tags/') || contains(github.event.head_commit.message, '[release v1.0.70]')
     runs-on: ubuntu-latest
     env:
-      RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.69' }}
+      RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.70' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,6 +40,7 @@ jobs:
             CHANGELOG_v1.0.67_HU.md \
             CHANGELOG_v1.0.68_HU.md \
             CHANGELOG_v1.0.69_HU.md \
+            CHANGELOG_v1.0.70_HU.md \
             LICENSE \
             NOTICE.md \
             hacs.json
